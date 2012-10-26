@@ -12,7 +12,7 @@
 
 (defn ensure-conformity-attribute
   "Ensure that conformity-attr, a keyword-valued attribute,
-   is installed in database."
+   is installed in the database."
   [conn conformity-attr]
   (when-not (has-attribute? (db conn) conformity-attr)
     (d/transact conn [{:db/id #db/id [:db.part/db]
