@@ -49,17 +49,22 @@ You can see this more directly illustrated in a console…
     
     ; nREPL 0.1.5
     
-    ; … (def conn X) for your DB
+    ; Setup a in-memory db
+    user> (use '[datomic.api :as d])
+    user> (def uri "datomic:mem//my-project")
+    user> (d/create-database uri)
+    user> (def conn (d/connect uri))
     
-    user> (use '[conformity as c])
+    ; Hook up conformity and your sample datom
+    user> (use '[conformity :as c])
     user> (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
     user> (def norms-map (load-resource "something.dtm"))
     
-    user> (c/has-attribute? :something/title)
+    user> (c/has-attribute? (db conn) :something/title)
     false
     
-    user> (c/ensure-conforms conn norms-map :my-project/something-schema)
-    user> (c/has-attribute? :something/title)
+    user> (c/ensure-conforms conn norms-map [:my-project/something-schema])
+    user> (c/has-attribute? (db conn) :something/title)
     true
     
 ### Caveat: Norms only get conformed-to once!
