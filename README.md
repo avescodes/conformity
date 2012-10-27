@@ -36,12 +36,19 @@ Then in your code:
     # src/my_project/something.clj
     
     (ns my-project.something
-      (:use [conformity :as c]))
-      
+      (:use [conformity :as c]
+            [datomic.api :as d]))
+
+    (def uri "datomic:mem://my-project")
+    (d/create-database uri)
+    (def conn (d/connect uri))
+
     (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
-    (def norms (load-resource "something.dtm"))
-    
-    (c/ensure-conforms conn norms [:my-project/something-schema]))
+    (def norms-map (load-resource "something.dtm"))
+
+    (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
+    (c/ensure-conforms conn norms-map [:my-project/something-schema])
+    (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
     
     # ... Code dependant on the presence of attributes in :my-project/something-schema
 
@@ -50,22 +57,22 @@ You can see this more directly illustrated in a console…
     ; nREPL 0.1.5
     
     ; Setup a in-memory db
-    user> (use '[datomic.api :as d])
-    user> (def uri "datomic:mem//my-project")
-    user> (d/create-database uri)
-    user> (def conn (d/connect uri))
+    (use '[datomic.api :as d])
+    (def uri "datomic:mem://my-project")
+    (d/create-database uri)
+    (def conn (d/connect uri))
     
     ; Hook up conformity and your sample datom
-    user> (use '[conformity :as c])
-    user> (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
-    user> (def norms-map (load-resource "something.dtm"))
+    (use '[conformity :as c])
+    (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
+    (def norms-map (load-resource "something.dtm"))
     
-    user> (c/has-attribute? (db conn) :something/title)
-    false
+    (c/has-attribute? (db conn) :something/title)
+    ; -> false
     
-    user> (c/ensure-conforms conn norms-map [:my-project/something-schema])
-    user> (c/has-attribute? (db conn) :something/title)
-    true
+    (c/ensure-conforms conn norms-map [:my-project/something-schema])
+    (c/has-attribute? (db conn) :something/title)
+    ; -> true
     
 ### Caveat: Norms only get conformed-to once!
 
