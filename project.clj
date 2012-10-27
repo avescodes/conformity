@@ -1,4 +1,4 @@
-(defproject conformity "0.0.1"
+(defproject conformity "0.1.0"
   :description "(Mostly) idempotent datom transacting for Datomic.\n\nSpecial thanks to Stuart Halloway for the original idea, implementation and permission to take it and run."
   :url "http://github.com/rkneufeld/conformity"
   :license {:name "Eclipse Public License"
