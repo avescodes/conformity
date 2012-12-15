@@ -12,15 +12,15 @@ In a more general sense, conformity allows you to declare expectations (in the f
 ## Dependency
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
-
-    [conformity "0.1.0"]
-    
+```clojure
+[conformity "0.1.0"]
+```
     
 
 ## Usage
 
 The easiest way to use conformity is to store your norms in a datom that lives in your `resources/` folder.
-
+```clojure
     # resources/something.dtm
     
     {:my-project/something-schema
@@ -30,10 +30,10 @@ The easiest way to use conformity is to store your norms in a datom that lives i
                 :db/cardinality :db.cardinality/one
                 :db/index false
                 :db.install/_attribute :db.part/db}]]}}
-    
+```
 Then in your code:
-
-    # src/my_project/something.clj
+# src/my_project/something.clj
+```clojure
     
     (ns my-project.something
       (:use [conformity :as c]
@@ -49,11 +49,11 @@ Then in your code:
     (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
     (c/ensure-conforms conn norms-map [:my-project/something-schema])
     (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
-    
+ ```   
     # ... Code dependant on the presence of attributes in :my-project/something-schema
 
 You can see this more directly illustrated in a console…
-    
+```clojure    
     ; nREPL 0.1.5
     
     ; Setup a in-memory db
@@ -73,7 +73,7 @@ You can see this more directly illustrated in a console…
     (c/ensure-conforms conn norms-map [:my-project/something-schema])
     (c/has-attribute? (db conn) :something/title)
     ; -> true
-    
+```    
 ### Caveat: Norms only get conformed-to once!
 
 Once a norm is conformed to that's it! *It won't be transacted again*. That does mean that **you shouldn't edit a norm and expect it to magically get updated** the next time `ensure-conforms` runs.
@@ -89,7 +89,9 @@ Unfortunately there isn't an easy way to rely on either pro or free, so I decide
 If you're using the pro version of Datomic you'll need to exclude the datomic-free dependency introduced by depending on conformity like so:
 
     # project.clj, inside your :dependencies map…
-    [conformity "0.1.0" :exclusions [com.datomic/datomic-free]]
+```clojure
+[conformity "0.1.0" :exclusions [com.datomic/datomic-free]]
+```
     
 ## License
 
