@@ -12,68 +12,66 @@ In a more general sense, conformity allows you to declare expectations (in the f
 ## Dependency
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
-
-    [conformity "0.1.0"]
-    
+```clojure
+[conformity "0.1.0"]
+```
     
 
 ## Usage
 
 The easiest way to use conformity is to store your norms in a datom that lives in your `resources/` folder.
-
-    # resources/something.dtm
-    
-    {:my-project/something-schema
-     {:txes [[{:db/id #db/id [:db.part/db]
-                :db/ident :something/title
-                :db/valueType :db.type/string
-                :db/cardinality :db.cardinality/one
-                :db/index false
-                :db.install/_attribute :db.part/db}]]}}
-    
+ # resources/something.dtm
+```clojure
+{:my-project/something-schema
+ {:txes [[{:db/id #db/id [:db.part/db]
+            :db/ident :something/title
+            :db/valueType :db.type/string
+            :db/cardinality :db.cardinality/one
+            :db/index false
+            :db.install/_attribute :db.part/db}]]}}
+```
 Then in your code:
+# src/my_project/something.clj
+```clojure
+(ns my-project.something
+  (:use [conformity :as c]
+        [datomic.api :as d]))
 
-    # src/my_project/something.clj
-    
-    (ns my-project.something
-      (:use [conformity :as c]
-            [datomic.api :as d]))
+(def uri "datomic:mem://my-project")
+(d/create-database uri)
+(def conn (d/connect uri))
 
-    (def uri "datomic:mem://my-project")
-    (d/create-database uri)
-    (def conn (d/connect uri))
+(defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
+(def norms-map (load-resource "something.dtm"))
 
-    (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
-    (def norms-map (load-resource "something.dtm"))
-
-    (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
-    (c/ensure-conforms conn norms-map [:my-project/something-schema])
-    (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
-    
+(println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
+(c/ensure-conforms conn norms-map [:my-project/something-schema])
+(println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
+ ```   
     # ... Code dependant on the presence of attributes in :my-project/something-schema
 
 You can see this more directly illustrated in a console…
-    
-    ; nREPL 0.1.5
-    
-    ; Setup a in-memory db
-    (use '[datomic.api :as d])
-    (def uri "datomic:mem://my-project")
-    (d/create-database uri)
-    (def conn (d/connect uri))
-    
-    ; Hook up conformity and your sample datom
-    (use '[conformity :as c])
-    (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
-    (def norms-map (load-resource "something.dtm"))
-    
-    (c/has-attribute? (db conn) :something/title)
-    ; -> false
-    
-    (c/ensure-conforms conn norms-map [:my-project/something-schema])
-    (c/has-attribute? (db conn) :something/title)
-    ; -> true
-    
+```clojure    
+; nREPL 0.1.5
+
+; Setup a in-memory db
+(use '[datomic.api :as d])
+(def uri "datomic:mem://my-project")
+(d/create-database uri)
+(def conn (d/connect uri))
+
+; Hook up conformity and your sample datom
+(use '[conformity :as c])
+(defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
+(def norms-map (load-resource "something.dtm"))
+
+(c/has-attribute? (db conn) :something/title)
+; -> false
+
+(c/ensure-conforms conn norms-map [:my-project/something-schema])
+(c/has-attribute? (db conn) :something/title)
+; -> true
+```    
 ### Caveat: Norms only get conformed-to once!
 
 Once a norm is conformed to that's it! *It won't be transacted again*. That does mean that **you shouldn't edit a norm and expect it to magically get updated** the next time `ensure-conforms` runs.
@@ -89,7 +87,9 @@ Unfortunately there isn't an easy way to rely on either pro or free, so I decide
 If you're using the pro version of Datomic you'll need to exclude the datomic-free dependency introduced by depending on conformity like so:
 
     # project.clj, inside your :dependencies map…
-    [conformity "0.1.0" :exclusions [com.datomic/datomic-free]]
+```clojure
+[conformity "0.1.0" :exclusions [com.datomic/datomic-free]]
+```
     
 ## License
 
