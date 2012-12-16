@@ -47,9 +47,9 @@ Then in your code:
 (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
 (c/ensure-conforms conn norms-map [:my-project/something-schema])
 (println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
- ```   
-    # ... Code dependant on the presence of attributes in :my-project/something-schema
 
+; ... Code dependant on the presence of attributes in :my-project/something-schema
+```
 You can see this more directly illustrated in a console…
 ```clojure    
 ; nREPL 0.1.5
@@ -86,8 +86,9 @@ Unfortunately there isn't an easy way to rely on either pro or free, so I decide
 
 If you're using the pro version of Datomic you'll need to exclude the datomic-free dependency introduced by depending on conformity like so:
 
-    # project.clj, inside your :dependencies map…
 ```clojure
+; project.clj, inside your :dependencies map…
+
 [conformity "0.1.0" :exclusions [com.datomic/datomic-free]]
 ```
     
