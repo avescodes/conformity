@@ -3,7 +3,7 @@
   :url "http://github.com/rkneufeld/conformity"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.4.0"]
-                 [com.datomic/datomic-free "0.8.3551"]]
-  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.0"]]
+  :dependencies [[org.clojure/clojure "1.5.1"]
+                 [com.datomic/datomic-free "0.8.4007"]]
+  :profiles {:dev {:dependencies [[org.clojure/tools.namespace "0.2.3"]]
                    :source-paths ["dev"]}})
