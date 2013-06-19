@@ -57,8 +57,8 @@
            (if txes
              (doseq [tx txes]
                ;; hrm, could mark the last tx specially
-               (d/transact conn (cons {:db/id (d/tempid :db.part/tx)
-                                       conformity-attr norm}
-                                      tx)))
+               @(d/transact conn (cons {:db/id (d/tempid :db.part/tx)
+                                        conformity-attr norm}
+                                       tx)))
              (throw (ex-info (str "No data provided for norm " norm)
                              {:schema/missing norm}))))))))
