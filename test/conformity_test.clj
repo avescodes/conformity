@@ -16,6 +16,15 @@
                                  :db/cardinality :db.cardinality/one
                                  :db/fulltext false
                                  :db/index false
+                                 :db.install/_attribute :db.part/db}]]}
+                       :test/bad-norm-1
+                       {:txes [[{:db/id #db/id [:db.part/db]
+                                 :db/ident :test/attribute
+                                 ;; Bad data type - should 'splode
+                                 :db/valueType :db.type/nosuch
+                                 :db/cardinality :db.cardinality/one
+                                 :db/fulltext false
+                                 :db/index false
                                  :db.install/_attribute :db.part/db}]]}})
 
 (deftest test-ensure-conforms
@@ -55,3 +64,12 @@
     (let [conn (fresh-conn)]
       (ensure-conformity-attribute conn :test/conformity)
       (is (= (count-txes conn) (do (ensure-conformity-attribute conn :test/conformity) (count-txes conn)))))))
+
+(deftest test-fails-on-bad-norm
+  (testing "It explodes when you pass it a bad norm"
+    (let [conn (fresh-conn)]
+      (try
+        (ensure-conforms conn sample-norms-map [:test/bad-norm-1])
+        (is false "ensure-conforms should have thrown an exception")
+        (catch Exception _
+          (is true "Blew up like it was supposed to."))))))
