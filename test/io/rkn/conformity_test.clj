@@ -1,6 +1,6 @@
-(ns conformity-test
+(ns io.rkn.conformity-test
   (:use clojure.test
-        conformity
+        io.rkn.conformity
         [datomic.api :only [q db] :as d]))
 
 (def uri  "datomic:mem://test")

@@ -13,7 +13,7 @@ In a more general sense, conformity allows you to declare expectations (in the f
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
 ```clojure
-[conformity "0.1.0"]
+[io.rkn/conformity "0.2.1"]
 ```
     
 
@@ -34,7 +34,7 @@ Then in your code:
 # src/my_project/something.clj
 ```clojure
 (ns my-project.something
-  (:use [conformity :as c]
+  (:use [io.rkn.conformity :as c]
         [datomic.api :as d]))
 
 (def uri "datomic:mem://my-project")
@@ -61,7 +61,7 @@ You can see this more directly illustrated in a console…
 (def conn (d/connect uri))
 
 ; Hook up conformity and your sample datom
-(use '[conformity :as c])
+(use '[io.rkn.conformity :as c])
 (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
 (def norms-map (load-resource "something.dtm"))
 
@@ -89,11 +89,11 @@ If you're using the pro version of Datomic you'll need to exclude the datomic-fr
 ```clojure
 ; project.clj, inside your :dependencies map…
 
-[conformity "0.1.0" :exclusions [com.datomic/datomic-free]]
+[io.rkn.conformity "0.2.1" :exclusions [com.datomic/datomic-free]]
 ```
     
 ## License
 
-Copyright © 2012 Ryan Neufeld
+Copyright © 2012-2013 Ryan Neufeld
 
 Distributed under the Eclipse Public License, the same as Clojure.

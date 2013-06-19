@@ -1,4 +1,4 @@
-(ns conformity
+(ns io.rkn.conformity
   (:use [datomic.api :only [q db] :as d]))
 
 (def default-conformity-attribute :confirmity/conformed-norms)
