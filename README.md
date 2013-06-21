@@ -23,7 +23,7 @@ The easiest way to use conformity is to store your norms in a datom that lives i
  # resources/something.dtm
 ```clojure
 {:my-project/something-schema
- {:txes [[{:db/id #db/id [:db.part/db]
+  {:txes [[{:db/id #db/id [:db.part/db]
             :db/ident :something/title
             :db/valueType :db.type/string
             :db/cardinality :db.cardinality/one
