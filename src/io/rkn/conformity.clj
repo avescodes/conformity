@@ -53,7 +53,9 @@
      (ensure-conformity-attribute conn conformity-attr)
      (doseq [norm norm-names]
        (when-not (conforms-to? (db conn) conformity-attr norm)
-         (let [{txes :txes} (get norm-map norm)]
+         (let [{:keys [txes requires]} (get norm-map norm)]
+           (when requires
+             (ensure-conforms conn conformity-attr norm-map requires))
            (if txes
              (doseq [tx txes]
                ;; hrm, could mark the last tx specially
@@ -62,3 +64,4 @@
                                        tx)))
              (throw (ex-info (str "No data provided for norm " norm)
                              {:schema/missing norm}))))))))
+
