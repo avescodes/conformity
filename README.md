@@ -13,9 +13,9 @@ In a more general sense, conformity allows you to declare expectations (in the f
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
 ```clojure
-[io.rkn/conformity "0.2.1"]
+[io.rkn/conformity "0.3.0"]
 ```
-    
+
 
 ## Usage
 
@@ -51,7 +51,7 @@ Then in your code:
 ; ... Code dependant on the presence of attributes in :my-project/something-schema
 ```
 You can see this more directly illustrated in a console…
-```clojure    
+```clojure
 ; nREPL 0.1.5
 
 ; Setup a in-memory db
@@ -71,12 +71,12 @@ You can see this more directly illustrated in a console…
 (c/ensure-conforms conn norms-map [:my-project/something-schema])
 (c/has-attribute? (db conn) :something/title)
 ; -> true
-```    
+```
 ### Caveat: Norms only get conformed-to once!
 
 Once a norm is conformed to that's it! *It won't be transacted again*. That does mean that **you shouldn't edit a norm and expect it to magically get updated** the next time `ensure-conforms` runs.
 
-In the future you may be able to intelligently version norms themselves, but I had to draw the line somewhere for the initial release. 
+In the future you may be able to intelligently version norms themselves, but I had to draw the line somewhere for the initial release.
 
 ## But I use datomic-pro!
 
@@ -89,9 +89,9 @@ If you're using the pro version of Datomic you'll need to exclude the datomic-fr
 ```clojure
 ; project.clj, inside your :dependencies map…
 
-[io.rkn/conformity "0.2.1" :exclusions [com.datomic/datomic-free]]
+[io.rkn/conformity "0.3.0" :exclusions [com.datomic/datomic-free]]
 ```
-    
+
 ## License
 
 Copyright © 2012-2013 Ryan Neufeld
