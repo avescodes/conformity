@@ -58,10 +58,13 @@
              (ensure-conforms conn conformity-attr norm-map requires))
            (if txes
              (doseq [tx txes]
-               ;; hrm, could mark the last tx specially
-               @(d/transact conn (cons {:db/id (d/tempid :db.part/tx)
-                                        conformity-attr norm}
-                                       tx)))
+               (try
+                 ;; hrm, could mark the last tx specially
+                 @(d/transact conn (cons {:db/id (d/tempid :db.part/tx)
+                                          conformity-attr norm}
+                                         tx))
+                 (catch Throwable t
+                   (throw (ex-info (.getMessage t) {:tx tx} t)))))
              (throw (ex-info (str "No data provided for norm " norm)
                              {:schema/missing norm}))))))))
 
