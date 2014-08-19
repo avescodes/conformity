@@ -44,9 +44,9 @@ Then in your code:
 (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
 (def norms-map (load-resource "something.dtm"))
 
-(println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
+(println (str "Has attribute? " (c/has-attribute? (d/db conn) :something/title)))
 (c/ensure-conforms conn norms-map [:my-project/something-schema])
-(println (str "Has attribute? " (c/has-attribute? (db conn) :something/title)))
+(println (str "Has attribute? " (c/has-attribute? (d/db conn) :something/title)))
 
 ; ... Code dependant on the presence of attributes in :my-project/something-schema
 ```
