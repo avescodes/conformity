@@ -19,10 +19,10 @@ Conformity is available on clojars, and can be included in your leiningen `proje
 
 ## Usage
 
-The easiest way to use conformity is to store your norms in a datom that lives in your `resources/` folder.
+The easiest way to use conformity is to store your norms in an edn file that lives in your `resources/` folder.
  
 ```clojure
-# resources/something.dtm
+;; resources/something.edn
 {:my-project/something-schema
   {:txes [[{:db/id #db/id [:db.part/db]
             :db/ident :something/title
@@ -43,7 +43,7 @@ Then in your code:
 (def conn (d/connect uri))
 
 (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
-(def norms-map (load-resource "something.dtm"))
+(def norms-map (load-resource "something.edn"))
 
 (println (str "Has attribute? " (c/has-attribute? (d/db conn) :something/title)))
 (c/ensure-conforms conn norms-map [:my-project/something-schema])
@@ -64,7 +64,7 @@ You can see this more directly illustrated in a console…
 ; Hook up conformity and your sample datom
 (use '[io.rkn.conformity :as c])
 (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
-(def norms-map (load-resource "something.dtm"))
+(def norms-map (load-resource "something.edn"))
 
 (c/has-attribute? (db conn) :something/title)
 ; -> false
@@ -95,6 +95,6 @@ If you're using the pro version of Datomic you'll need to exclude the datomic-fr
 
 ## License
 
-Copyright © 2012-2013 Ryan Neufeld
+Copyright © 2012-2014 Ryan Neufeld
 
 Distributed under the Eclipse Public License, the same as Clojure.
