@@ -47,7 +47,9 @@
       norm-map         a map from norm names to data maps.
                        the data map contains one keys:
                          :txes     - the data to install
-      norm-names       A collection of names of norms to conform to"
+      norm-names       (optional) A collection of names of norms to conform to.
+                       Will use keys of norm-map if not provided."
+  ([conn norm-map] (ensure-conforms conn norm-map (keys norm-map)))
   ([conn norm-map norm-names] (ensure-conforms conn default-conformity-attribute norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
      (ensure-conformity-attribute conn conformity-attr)
