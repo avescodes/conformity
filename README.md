@@ -20,8 +20,9 @@ Conformity is available on clojars, and can be included in your leiningen `proje
 ## Usage
 
 The easiest way to use conformity is to store your norms in a datom that lives in your `resources/` folder.
- # resources/something.dtm
+ 
 ```clojure
+# resources/something.dtm
 {:my-project/something-schema
   {:txes [[{:db/id #db/id [:db.part/db]
             :db/ident :something/title
