@@ -15,7 +15,7 @@
    is installed in the database."
   [conn conformity-attr]
   (when-not (has-attribute? (db conn) conformity-attr)
-    (d/transact conn [{:db/id #db/id [:db.part/db]
+    (d/transact conn [{:db/id (d/tempid :db.part/db)
                        :db/ident conformity-attr
                        :db/valueType :db.type/keyword
                        :db/cardinality :db.cardinality/one
