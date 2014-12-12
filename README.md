@@ -13,7 +13,7 @@ In a more general sense, conformity allows you to declare expectations (in the f
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
 ```clojure
-[io.rkn/conformity "0.3.1"]
+[io.rkn/conformity "0.3.2"]
 ```
 
 
