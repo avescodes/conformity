@@ -1,7 +1,16 @@
 (ns io.rkn.conformity
-  (:use [datomic.api :only [q db] :as d]))
+  (:use [datomic.api :only [q db] :as d]
+        [clojure.java.io :as io]))
 
 (def default-conformity-attribute :confirmity/conformed-norms)
+
+(defn load-schema-rsc
+  "Load an edn schema resource file"
+  [resource-filename]
+  (-> resource-filename
+      io/resource
+      slurp
+      read-string))
 
 (defn has-attribute?
     "Check if a database has an attribute named attr-name"
