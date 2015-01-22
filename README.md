@@ -90,7 +90,7 @@ If you're using the pro version of Datomic you'll need to exclude the datomic-fr
 ```clojure
 ; project.clj, inside your :dependencies map…
 
-[io.rkn/conformity "0.3.0" :exclusions [com.datomic/datomic-free]]
+[io.rkn/conformity "0.3.3" :exclusions [com.datomic/datomic-free]]
 ```
 
 ## License
