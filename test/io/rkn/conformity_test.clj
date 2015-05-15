@@ -9,40 +9,33 @@
   (d/create-database uri)
   (d/connect uri))
 
-(def sample-norms-map {:test/norm-1
-                       {:txes [[{:db/id #db/id [:db.part/db]
-                                 :db/ident :test/attribute
-                                 :db/valueType :db.type/string
-                                 :db/cardinality :db.cardinality/one
-                                 :db/fulltext false
-                                 :db/index false
-                                 :db.install/_attribute :db.part/db}]]}
-                       :test/bad-norm-1
-                       {:txes [[{:db/id #db/id [:db.part/db]
-                                 :db/ident :test/attribute
-                                 ;; Bad data type - should 'splode
-                                 :db/valueType :db.type/nosuch
-                                 :db/cardinality :db.cardinality/one
-                                 :db/fulltext false
-                                 :db/index false
-                                 :db.install/_attribute :db.part/db}]]}})
+(defn attr
+  ([ident]
+   (attr ident :db.type/string))
+  ([ident value-type]
+   [{:db/id (d/tempid :db.part/db)
+     :db/ident ident
+     :db/valueType value-type
+     :db/cardinality :db.cardinality/one
+     :db.install/_attribute :db.part/db}]))
 
-(def sample-norms-map2 {:test2/norm-1
-                        {:txes [[{:db/id #db/id [:db.part/db]
-                                  :db/ident :test/attribute
-                                  :db/valueType :db.type/string
-                                  :db/cardinality :db.cardinality/one
-                                  :db/fulltext false
-                                  :db/index false
-                                  :db.install/_attribute :db.part/db}]]}
-                        :test2/norm-2
-                        {:txes [[{:db/id #db/id [:db.part/db]
-                                  :db/ident :test/attribute2
-                                  :db/valueType :db.type/string
-                                  :db/cardinality :db.cardinality/one
-                                  :db/fulltext false
-                                  :db/index false
-                                  :db.install/_attribute :db.part/db}]]}})
+(def sample-norms-map1 {:test1/norm1
+                        {:txes [(attr :test/attribute1)
+                                (attr :test/attribute2)]}
+                        :test1/norm2
+                        {:txes [(attr :test/attribute3)]}})
+
+(def sample-norms-map2 {:test2/norm1
+                        {:txes [(attr :test/attribute1)]}
+                        :test2/norm2 ;; Bad data type - should 'splode
+                        {:txes [(attr :test/attribute2 :db.type/nosuch)]}})
+
+(def sample-norms-map3 {:test3/norm1
+                        {:txes [(attr :test/attribute1)
+                                (attr :test/attribute2)]}
+                        :test3/norm2
+                        {:txes [(attr :test/attribute3)]
+                         :requires [:test3/norm1]}})
 
 (deftest test-ensure-conforms
   (testing "installs all norm expected with explicit norms list"
