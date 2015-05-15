@@ -73,18 +73,21 @@
 (defn conforms-to?
   "Does database have a norm installed?
 
-  ([db norm] (conforms-to? db default-conformity-attribute norm))
-  ([db conformity-attr norm]
-     (and (has-attribute? db conformity-attr)
-          (-> (q '[:find ?e
-                   :in $ ?sa ?sn
-                   :where [?e ?sa ?sn ?e]]
-                 db conformity-attr norm)
-              seq boolean))))
       conformity-attr  (optional) the keyword name of the attribute used to
                        track conformity
       norm             the keyword name of the norm you want to check
       tx-count         the count of transactions for that norm"
+  ([db norm tx-count]
+   (conforms-to? db default-conformity-attribute norm tx-count))
+  ([db conformity-attr norm tx-count]
+   (and (has-attribute? db conformity-attr)
+        (pos? tx-count)
+        (-> (q '[:find ?tx
+                 :in $ ?na ?nv
+                 :where [?tx ?na ?nv ?tx]]
+               db conformity-attr norm)
+            count
+            (= tx-count)))))
 
 (defn ensure-conforms
   "Ensure that norms represented as datoms are conformed-to (installed), be they
