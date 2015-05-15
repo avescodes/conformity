@@ -79,20 +79,6 @@ Once a norm is conformed to that's it! *It won't be transacted again*. That does
 
 In the future you may be able to intelligently version norms themselves, but I had to draw the line somewhere for the initial release.
 
-## But I use datomic-pro!
-
-Awesome, I love you!
-
-Unfortunately there isn't an easy way to rely on either pro or free, so I decided to choose datomic-free for the least friction.
-
-If you're using the pro version of Datomic you'll need to exclude the datomic-free dependency introduced by depending on conformity like so:
-
-```clojure
-; project.clj, inside your :dependencies map…
-
-[io.rkn/conformity "0.3.3" :exclusions [com.datomic/datomic-free]]
-```
-
 ## License
 
 Copyright © 2012-2014 Ryan Neufeld
