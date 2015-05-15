@@ -1,6 +1,6 @@
 (ns io.rkn.conformity
-  (:use [datomic.api :only [q db] :as d]
-        [clojure.java.io :as io]))
+  (:require [datomic.api :refer [q db] :as d]
+            [clojure.java.io :as io]))
 
 (def default-conformity-attribute :confirmity/conformed-norms)
 

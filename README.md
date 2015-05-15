@@ -35,8 +35,8 @@ Then in your code:
 # src/my_project/something.clj
 ```clojure
 (ns my-project.something
-  (:use [io.rkn.conformity :as c]
-        [datomic.api :as d]))
+  (:require [io.rkn.conformity :as c]
+            [datomic.api :as d]))
 
 (def uri "datomic:mem://my-project")
 (d/create-database uri)
@@ -56,13 +56,13 @@ You can see this more directly illustrated in a console…
 ; nREPL 0.1.5
 
 ; Setup a in-memory db
-(use '[datomic.api :as d])
+(require '[datomic.api :as d])
 (def uri "datomic:mem://my-project")
 (d/create-database uri)
 (def conn (d/connect uri))
 
 ; Hook up conformity and your sample datom
-(use '[io.rkn.conformity :as c])
+(require '[io.rkn.conformity :as c])
 (defn load-resource [filename] (read-string (slurp (clojure.java.io/reader (clojure.java.io/resource filename)))))
 (def norms-map (load-resource "something.edn"))
 

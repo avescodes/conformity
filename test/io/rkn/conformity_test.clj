@@ -1,7 +1,7 @@
 (ns io.rkn.conformity-test
-  (:use clojure.test
-        io.rkn.conformity
-        [datomic.api :only [q db] :as d]))
+  (:require [clojure.test :refer :all]
+            [io.rkn.conformity :refer :all]
+            [datomic.api :refer [q db] :as d]))
 
 (def uri  "datomic:mem://test")
 (defn fresh-conn []
