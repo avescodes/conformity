@@ -38,54 +38,87 @@
                          :requires [:test3/norm1]}})
 
 (deftest test-ensure-conforms
-  (testing "installs all norm expected with explicit norms list"
-    (let [conn (fresh-conn)]
-      (ensure-conforms conn sample-norms-map [:test/norm-1])
-      (is (= 1 (count (q '[:find ?e :where [?e :db/ident :test/attribute]] (db conn)))))))
+  (testing "installs all expected norms"
 
-  (testing "installs all norm expected with no explicit norms list"
-    (let [conn (fresh-conn)]
-      (ensure-conforms conn sample-norms-map2)
-      (is (= 1 (count (q '[:find ?e :where [?e :db/ident :test/attribute]] (db conn)))))
-      (is (= 1 (count (q '[:find ?e :where [?e :db/ident :test/attribute2]] (db conn)))))))
+    (testing "without explicit norms list"
+      (let [conn (fresh-conn)]
+        (ensure-conforms conn sample-norms-map1)
+        (is (has-attribute? (db conn) :test/attribute1))
+        (is (has-attribute? (db conn) :test/attribute2))
+        (is (has-attribute? (db conn) :test/attribute3))))
+
+    (testing "with explicit norms list"
+      (let [conn (fresh-conn)]
+        (ensure-conforms conn sample-norms-map2 [:test2/norm1])
+        (is (has-attribute? (db conn) :test/attribute1))
+        (is (not (has-attribute? (db conn) :test/attribute2))))
+
+      (testing "and requires"
+        (let [conn (fresh-conn)]
+          (ensure-conforms conn sample-norms-map3 [:test3/norm2])
+          (is (has-attribute? (db conn) :test/attribute1))
+          (is (has-attribute? (db conn) :test/attribute2))
+          (is (has-attribute? (db conn) :test/attribute3))))))
 
   (testing "throws exception if norm-map lacks transactions for a norm"
     (let [conn (fresh-conn)]
-      (is (thrown-with-msg? clojure.lang.ExceptionInfo #"No data provided for norm :test/norm-2"
-                            (ensure-conforms conn {:test/norm-2 {}} [:test/norm-2]))))))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"No data provided for norm :test4/norm1"
+                            (ensure-conforms conn {}
+                                             [:test4/norm1])))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"No data provided for norm :test4/norm1"
+                            (ensure-conforms conn {:test4/norm1 {}}
+                                             [:test4/norm1])))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"No data provided for norm :test4/norm1"
+                            (ensure-conforms conn {:test4/norm1 {:txes []}}
+                                             [:test4/norm1]))))))
 
 (deftest test-conforms-to?
-  (testing "returns true if a norm is already installed"
-    (let [conn (fresh-conn)]
-      (ensure-conforms conn sample-norms-map [:test/norm-1])
-      (is (= true (conforms-to? (db conn) :test/norm-1)))))
+  (let [tx-count (count (:txes (sample-norms-map1 :test1/norm1)))]
+    (testing "returns true if a norm is already installed"
+      (let [conn (fresh-conn)]
+        (ensure-conforms conn sample-norms-map1 [:test1/norm1])
+        (is (= true (conforms-to? (db conn) :test1/norm1 tx-count)))))
 
-  (testing "returns false if a norm has not been installed"
-    (let [conn (fresh-conn)]
-      (ensure-conformity-attribute conn default-conformity-attribute)
-      (is (= false (conforms-to? (db conn) :test/norm-1)))))
+    (testing "returns false if"
+      (testing "a norm has not been installed"
+        (let [conn (fresh-conn)]
+          (ensure-conformity-schema conn default-conformity-attribute)
+          (is (= false (conforms-to? (db conn) :test1/norm1 tx-count)))))
 
-  (testing "returns false if conformity-attr does not exist"
-    (let [conn (fresh-conn)]
-      (is (= false (conforms-to? (db conn) :test/norm-1))))))
+      (testing "conformity-attr does not exist"
+        (let [conn (fresh-conn)]
+          (is (= false (conforms-to? (db conn) :test1/norm1 tx-count))))))))
 
-(deftest test-ensure-conform-attribute
-  (testing "it adds the conformity attribute if it is absent"
-    (let [conn (fresh-conn)]
-      (ensure-conformity-attribute conn :test/conformity)
-      (is (= true (has-attribute? (db conn) :test/conformity)))))
+(deftest test-ensure-conformity-schema
+  (testing "it adds the conformity schema if it is absent"
+    (let [conn (fresh-conn)
+          _ (ensure-conformity-schema conn :test/conformity)
+          db (db conn)]
+      (is (has-attribute? db :test/conformity))
+      (is (has-attribute? db :test/conformity-index))
+      (is (has-function? db conformity-ensure-norm-tx))))
 
-  (testing "it does nothing if the conformity attribute exists"
-    (defn count-txes [conn] (count (q '[:find ?tx :where [?tx :db/txInstant _]] (db conn))))
-    (let [conn (fresh-conn)]
-      (ensure-conformity-attribute conn :test/conformity)
-      (is (= (count-txes conn) (do (ensure-conformity-attribute conn :test/conformity) (count-txes conn)))))))
+  (testing "it does nothing if the conformity schema exists"
+    (let [conn (fresh-conn)
+          count-txes (fn [db]
+                       (-> (q '[:find ?tx
+                                :where [?tx :db/txInstant]]
+                              db)
+                           count))
+          _ (ensure-conformity-schema conn :test/conformity)
+          before (count-txes (db conn))
+          _ (ensure-conformity-schema conn :test/conformity)
+          after (count-txes (db conn))]
+      (is (= before after)))))
 
 (deftest test-fails-on-bad-norm
   (testing "It explodes when you pass it a bad norm"
     (let [conn (fresh-conn)]
       (try
-        (ensure-conforms conn sample-norms-map [:test/bad-norm-1])
+        (ensure-conforms conn sample-norms-map1 [:test2/norm2])
         (is false "ensure-conforms should have thrown an exception")
         (catch Exception _
           (is true "Blew up like it was supposed to."))))))
