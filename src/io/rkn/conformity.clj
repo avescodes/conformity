@@ -53,7 +53,9 @@
                        :db/ident conformity-attr
                        :db/valueType :db.type/keyword
                        :db/cardinality :db.cardinality/one
-                       :db/doc "Name of schema installed by this transaction"
+                       :db/doc "Name of this transaction's norm"
+                       :db/index true
+                       :db.install/_attribute :db.part/db}]))
   (when-not (has-attribute? (db conn) (index-attr conformity-attr))
     (d/transact conn [{:db/id (d/tempid :db.part/db)
                        :db/ident (index-attr conformity-attr)
@@ -71,9 +73,6 @@
 (defn conforms-to?
   "Does database have a norm installed?
 
-      conformity-attr  (optional) the keyword name of the attribute used to track
-                       conformity
-      norm             the keyword name of the norm you want to check"
   ([db norm] (conforms-to? db default-conformity-attribute norm))
   ([db conformity-attr norm]
      (and (has-attribute? db conformity-attr)
@@ -82,17 +81,21 @@
                    :where [?e ?sa ?sn ?e]]
                  db conformity-attr norm)
               seq boolean))))
+      conformity-attr  (optional) the keyword name of the attribute used to
+                       track conformity
+      norm             the keyword name of the norm you want to check
+      tx-count         the count of transactions for that norm"
 
 (defn ensure-conforms
   "Ensure that norms represented as datoms are conformed-to (installed), be they
-   schema, data or otherwise.
+  schema, data or otherwise.
 
-      conformity-attr  (optional) the keyword-valued attribute where conformity
-                       tracks enacted norms.
+      conformity-attr  (optional) the keyword name of the attribute used to
+                       track conformity
       norm-map         a map from norm names to data maps.
-                       the data map contains:
+                       a data map contains:
                          :txes     - the data to install
-                         :requires - (optional) The name of a prerequisite norm
+                         :requires - (optional) a list of prerequisite norms
                                      in norm-map.
       norm-names       (optional) A collection of names of norms to conform to.
                        Will use keys of norm-map if not provided."
