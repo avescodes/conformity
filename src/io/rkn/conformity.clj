@@ -43,9 +43,10 @@
       :db/fn
       boolean))
 
-(defn ensure-conformity-attribute
-  "Ensure that conformity-attr, a keyword-valued attribute,
-   is installed in the database."
+(defn ensure-conformity-schema
+  "Ensure that the two attributes and one transaction function
+  required to track conformity via the conformity-attr keyword
+  parameter are installed in the database."
   [conn conformity-attr]
   (when-not (has-attribute? (db conn) conformity-attr)
     (d/transact conn [{:db/id (d/tempid :db.part/db)
@@ -98,7 +99,6 @@
   ([conn norm-map] (ensure-conforms conn norm-map (keys norm-map)))
   ([conn norm-map norm-names] (ensure-conforms conn default-conformity-attribute norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
-     (ensure-conformity-attribute conn conformity-attr)
      (doseq [norm norm-names]
        (when-not (conforms-to? (db conn) conformity-attr norm)
          (let [{:keys [txes requires]} (get norm-map norm)]
@@ -116,3 +116,4 @@
              (throw (ex-info (str "No data provided for norm " norm)
                              {:schema/missing norm}))))))))
 
+   (ensure-conformity-schema conn conformity-attr)
