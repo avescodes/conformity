@@ -3,6 +3,18 @@
             [clojure.java.io :as io]))
 
 (def default-conformity-attribute :confirmity/conformed-norms)
+(def conformity-ensure-norm-tx :conformity/ensure-norm-tx)
+
+(def ensure-norm-tx-txfn
+  "transaction function to ensure each norm tx is executed exactly once"
+  (d/function
+   '{:lang :clojure
+     :params [db norm-attr norm index-attr index tx]
+     :code (when-not (seq (q '[:find ?tx
+                               :in $ ?na ?nv ?ia ?iv
+                               :where [?tx ?na ?nv ?tx] [?tx ?ia ?iv ?tx]]
+                             db norm-attr norm index-attr index))
+             tx)}))
 
 (defn load-schema-rsc
   "Load an edn schema resource file"
@@ -18,6 +30,12 @@
     (-> (d/entity db attr-name)
         :db.install/_attribute
         boolean))
+(defn has-function?
+  "Returns true if a database has a function named fn-name"
+  [db fn-name]
+  (-> (d/entity db fn-name)
+      :db/fn
+      boolean))
 
 (defn ensure-conformity-attribute
   "Ensure that conformity-attr, a keyword-valued attribute,
@@ -31,6 +49,11 @@
                        :db/doc "Name of schema installed by this transaction"
                        :db/index true
                        :db.install/_attribute :db.part/db}])))
+  (when-not (has-function? (db conn) conformity-ensure-norm-tx)
+    (d/transact conn [{:db/id (d/tempid :db.part/user)
+                       :db/ident conformity-ensure-norm-tx
+                       :db/doc "Ensures each norm tx is executed exactly once"
+                       :db/fn ensure-norm-tx-txfn}])))
 
 (defn conforms-to?
   "Does database have a norm installed?
