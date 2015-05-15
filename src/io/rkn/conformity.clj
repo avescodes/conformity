@@ -108,21 +108,24 @@
   ([conn norm-map norm-names]
    (ensure-conforms conn default-conformity-attribute norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
-     (doseq [norm norm-names]
-       (when-not (conforms-to? (db conn) conformity-attr norm)
-         (let [{:keys [txes requires]} (get norm-map norm)]
-           (when requires
-             (ensure-conforms conn conformity-attr norm-map requires))
-           (if txes
-             (doseq [tx txes]
-               (try
-                 ;; hrm, could mark the last tx specially
-                 @(d/transact conn (cons {:db/id (d/tempid :db.part/tx)
-                                          conformity-attr norm}
-                                         tx))
-                 (catch Throwable t
-                   (throw (ex-info (.getMessage t) {:tx tx} t)))))
-             (throw (ex-info (str "No data provided for norm " norm)
-                             {:schema/missing norm}))))))))
-
    (ensure-conformity-schema conn conformity-attr)
+   (doseq [norm norm-names
+           :let [{:keys [txes requires]} (get norm-map norm)
+                 tx-count (count txes)]
+           :when (not (conforms-to? (db conn) conformity-attr norm tx-count))]
+     (when (zero? tx-count)
+       (throw (ex-info (str "No data provided for norm " norm)
+                       {:schema/missing norm})))
+     (when requires
+       (ensure-conforms conn conformity-attr norm-map requires))
+     (doseq [[index tx] (map-indexed vector txes)]
+       (try
+         @(d/transact conn [[conformity-ensure-norm-tx
+                             conformity-attr norm
+                             (index-attr conformity-attr) index
+                             (cons {:db/id (d/tempid :db.part/tx)
+                                    conformity-attr norm
+                                    (index-attr conformity-attr) index}
+                                   tx)]])
+         (catch Throwable t
+           (throw (ex-info (.getMessage t) {:tx tx} t))))))))
