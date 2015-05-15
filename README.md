@@ -1,13 +1,10 @@
 # conformity
 
-A Clojure/Datomic library for idempotently\* transacting datoms (norms) into your database – be they schema, data, or otherwise.
+A Clojure/Datomic library for idempotently transacting datoms (norms) into your database – be they schema, data, or otherwise.
 
-In the simplest sense, conformity allows you to write schema migrations and ensure that they run once and only  once.
+In the simplest sense, conformity allows you to write schema migrations and ensure that they run once and only once.
 
 In a more general sense, conformity allows you to declare expectations (in the form of norms) about the state of your database, and enforce those idempotently without repeatedly transacting schema, required data, etc.
-
-
->\* I say idempotent in the sense that running `ensure-conforms` repeatedly in serial will not transact your norms more than once. If you do so in parallel I make no guarantees about behavior.
 
 ## Dependency
 
