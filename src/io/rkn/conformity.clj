@@ -31,11 +31,12 @@
            (str (name conformity-attr) "-index")))
 
 (defn has-attribute?
-    "Check if a database has an attribute named attr-name"
-    [db attr-name]
-    (-> (d/entity db attr-name)
-        :db.install/_attribute
-        boolean))
+  "Returns true if a database has an attribute named attr-name"
+  [db attr-name]
+  (-> (d/entity db attr-name)
+      :db.install/_attribute
+      boolean))
+
 (defn has-function?
   "Returns true if a database has a function named fn-name"
   [db fn-name]
@@ -102,8 +103,10 @@
                                      in norm-map.
       norm-names       (optional) A collection of names of norms to conform to.
                        Will use keys of norm-map if not provided."
-  ([conn norm-map] (ensure-conforms conn norm-map (keys norm-map)))
-  ([conn norm-map norm-names] (ensure-conforms conn default-conformity-attribute norm-map norm-names))
+  ([conn norm-map]
+   (ensure-conforms conn norm-map (keys norm-map)))
+  ([conn norm-map norm-names]
+   (ensure-conforms conn default-conformity-attribute norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
      (doseq [norm norm-names]
        (when-not (conforms-to? (db conn) conformity-attr norm)
