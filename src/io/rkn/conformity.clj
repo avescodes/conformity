@@ -24,6 +24,12 @@
       slurp
       read-string))
 
+(defn index-attr
+  "Returns the index-attr corresponding to a conformity-attr"
+  [conformity-attr]
+  (keyword (namespace conformity-attr)
+           (str (name conformity-attr) "-index")))
+
 (defn has-attribute?
     "Check if a database has an attribute named attr-name"
     [db attr-name]
@@ -47,8 +53,14 @@
                        :db/valueType :db.type/keyword
                        :db/cardinality :db.cardinality/one
                        :db/doc "Name of schema installed by this transaction"
+  (when-not (has-attribute? (db conn) (index-attr conformity-attr))
+    (d/transact conn [{:db/id (d/tempid :db.part/db)
+                       :db/ident (index-attr conformity-attr)
+                       :db/valueType :db.type/long
+                       :db/cardinality :db.cardinality/one
+                       :db/doc "Index of this transaction within its norm"
                        :db/index true
-                       :db.install/_attribute :db.part/db}])))
+                       :db.install/_attribute :db.part/db}]))
   (when-not (has-function? (db conn) conformity-ensure-norm-tx)
     (d/transact conn [{:db/id (d/tempid :db.part/user)
                        :db/ident conformity-ensure-norm-tx
