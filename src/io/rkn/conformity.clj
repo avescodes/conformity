@@ -54,8 +54,10 @@
       conformity-attr  (optional) the keyword-valued attribute where conformity
                        tracks enacted norms.
       norm-map         a map from norm names to data maps.
-                       the data map contains one keys:
+                       the data map contains:
                          :txes     - the data to install
+                         :requires - (optional) The name of a prerequisite norm
+                                     in norm-map.
       norm-names       (optional) A collection of names of norms to conform to.
                        Will use keys of norm-map if not provided."
   ([conn norm-map] (ensure-conforms conn norm-map (keys norm-map)))

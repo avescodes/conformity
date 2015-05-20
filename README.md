@@ -13,7 +13,7 @@ In a more general sense, conformity allows you to declare expectations (in the f
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
 ```clojure
-[io.rkn/conformity "0.3.2"]
+[io.rkn/conformity "0.3.3"]
 ```
 
 
@@ -90,7 +90,7 @@ If you're using the pro version of Datomic you'll need to exclude the datomic-fr
 ```clojure
 ; project.clj, inside your :dependencies map…
 
-[io.rkn/conformity "0.3.0" :exclusions [com.datomic/datomic-free]]
+[io.rkn/conformity "0.3.3" :exclusions [com.datomic/datomic-free]]
 ```
 
 ## License
