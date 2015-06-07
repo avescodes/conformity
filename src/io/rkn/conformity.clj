@@ -14,7 +14,10 @@
                                :in $ ?na ?nv ?ia ?iv
                                :where [?tx ?na ?nv ?tx] [?tx ?ia ?iv ?tx]]
                              db norm-attr norm index-attr index))
-             tx)}))
+             (cons {:db/id (d/tempid :db.part/tx)
+                    norm-attr norm
+                    index-attr index}
+                   tx))}))
 
 (defn load-schema-rsc
   "Load an edn schema resource file"
@@ -123,9 +126,6 @@
          @(d/transact conn [[conformity-ensure-norm-tx
                              conformity-attr norm
                              (index-attr conformity-attr) index
-                             (cons {:db/id (d/tempid :db.part/tx)
-                                    conformity-attr norm
-                                    (index-attr conformity-attr) index}
-                                   tx)]])
+                             tx]])
          (catch Throwable t
            (throw (ex-info (.getMessage t) {:tx tx} t))))))))
