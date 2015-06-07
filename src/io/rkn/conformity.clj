@@ -93,6 +93,53 @@
             count
             (= tx-count)))))
 
+(defn reduce-txes
+  "Reduces the seq of transactions for a norm into a transaction
+  result accumulator"
+  [acc conn norm-attr norm-name txes]
+  (reduce
+   (fn [acc [tx-index tx]]
+     (try
+       (let [safe-tx [conformity-ensure-norm-tx
+                      norm-attr norm-name
+                      (index-attr norm-attr) tx-index
+                      tx]
+             tx-result @(d/transact conn [safe-tx])]
+         (if (next (:tx-data tx-result))
+           (conj acc {:norm-name norm-name
+                      :tx-index tx-index
+                      :tx-result tx-result})
+           acc))
+       (catch Throwable t
+         (let [reason (.getMessage t)
+               data {:succeeded acc
+                     :failed {:norm-name norm-name
+                              :tx-index tx-index
+                              :reason reason}}]
+           (throw (ex-info reason data t))))))
+   acc (map-indexed vector txes)))
+
+(defn reduce-norms
+  "Reduces norms from a norm-map specified by a seq of norm-names into
+  a transaction result accumulator"
+  [acc conn norm-attr norm-map norm-names]
+  (reduce
+   (fn [acc norm-name]
+     (let [{:keys [txes requires]} (get norm-map norm-name)]
+       (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
+             acc
+             (empty? txes)
+             (let [reason (str "No transactions provided for norm " norm-name)
+                   data {:succeeded acc
+                         :failed {:norm-name norm-name
+                                  :reason reason}}]
+               (throw (ex-info reason data)))
+             :else
+             (-> acc
+                 (reduce-norms conn norm-attr norm-map requires)
+                 (reduce-txes conn norm-attr norm-name txes)))))
+   acc norm-names))
+
 (defn ensure-conforms
   "Ensure that norms represented as datoms are conformed-to (installed), be they
   schema, data or otherwise.
@@ -105,27 +152,17 @@
                          :requires - (optional) a list of prerequisite norms
                                      in norm-map.
       norm-names       (optional) A collection of names of norms to conform to.
-                       Will use keys of norm-map if not provided."
+                       Will use keys of norm-map if not provided.
+
+  On success, returns a vector of maps with values for :norm-name, :tx-index,
+  and :tx-result for each transaction that improved the db's conformity.
+
+  On failure, throws an ex-info with a reason and data about any partial
+  success before the failure."
   ([conn norm-map]
    (ensure-conforms conn norm-map (keys norm-map)))
   ([conn norm-map norm-names]
    (ensure-conforms conn default-conformity-attribute norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
    (ensure-conformity-schema conn conformity-attr)
-   (doseq [norm norm-names
-           :let [{:keys [txes requires]} (get norm-map norm)
-                 tx-count (count txes)]
-           :when (not (conforms-to? (db conn) conformity-attr norm tx-count))]
-     (when (zero? tx-count)
-       (throw (ex-info (str "No data provided for norm " norm)
-                       {:schema/missing norm})))
-     (when requires
-       (ensure-conforms conn conformity-attr norm-map requires))
-     (doseq [[index tx] (map-indexed vector txes)]
-       (try
-         @(d/transact conn [[conformity-ensure-norm-tx
-                             conformity-attr norm
-                             (index-attr conformity-attr) index
-                             tx]])
-         (catch Throwable t
-           (throw (ex-info (.getMessage t) {:tx tx} t))))))))
+   (reduce-norms [] conn conformity-attr norm-map norm-names)))
