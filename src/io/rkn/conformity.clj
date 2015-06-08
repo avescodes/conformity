@@ -6,7 +6,7 @@
 (def conformity-ensure-norm-tx :conformity/ensure-norm-tx)
 
 (def ensure-norm-tx-txfn
-  "transaction function to ensure each norm tx is executed exactly once"
+  "Transaction function to ensure each norm tx is executed exactly once"
   (d/function
    '{:lang :clojure
      :params [db norm-attr norm index-attr index tx]
