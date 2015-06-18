@@ -41,37 +41,47 @@
   (testing "installs all expected norms"
 
     (testing "without explicit norms list"
-      (let [conn (fresh-conn)]
-        (ensure-conforms conn sample-norms-map1)
+      (let [conn (fresh-conn)
+            result (ensure-conforms conn sample-norms-map1)]
+        (is (= (set (map (juxt :norm-name :tx-index) result))
+               (set [[:test1/norm1 0] [:test1/norm1 1] [:test1/norm2 0]])))
         (is (has-attribute? (db conn) :test/attribute1))
         (is (has-attribute? (db conn) :test/attribute2))
-        (is (has-attribute? (db conn) :test/attribute3))))
+        (is (has-attribute? (db conn) :test/attribute3))
+        (is (empty? (ensure-conforms conn sample-norms-map1)))))
 
     (testing "with explicit norms list"
-      (let [conn (fresh-conn)]
-        (ensure-conforms conn sample-norms-map2 [:test2/norm1])
+      (let [conn (fresh-conn)
+            result (ensure-conforms conn sample-norms-map2 [:test2/norm1])]
+        (is (= (map (juxt :norm-name :tx-index) result)
+               [[:test2/norm1 0]]))
         (is (has-attribute? (db conn) :test/attribute1))
-        (is (not (has-attribute? (db conn) :test/attribute2))))
+        (is (not (has-attribute? (db conn) :test/attribute2)))
+        (is (empty? (ensure-conforms conn sample-norms-map2 [:test2/norm1]))))
 
       (testing "and requires"
-        (let [conn (fresh-conn)]
-          (ensure-conforms conn sample-norms-map3 [:test3/norm2])
+        (let [conn (fresh-conn)
+              result (ensure-conforms conn sample-norms-map3 [:test3/norm2])]
+          (is (= (map (juxt :norm-name :tx-index) result)
+                 [[:test3/norm1 0] [:test3/norm1 1] [:test3/norm2 0]]))
           (is (has-attribute? (db conn) :test/attribute1))
           (is (has-attribute? (db conn) :test/attribute2))
-          (is (has-attribute? (db conn) :test/attribute3))))))
+          (is (has-attribute? (db conn) :test/attribute3))
+          (is (empty? (ensure-conforms conn sample-norms-map3
+                                       [:test3/norm2])))))))
 
   (testing "throws exception if norm-map lacks transactions for a norm"
     (let [conn (fresh-conn)]
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                            #"No data provided for norm :test4/norm1"
+                            #"No transactions provided for norm :test4/norm1"
                             (ensure-conforms conn {}
                                              [:test4/norm1])))
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                            #"No data provided for norm :test4/norm1"
+                            #"No transactions provided for norm :test4/norm1"
                             (ensure-conforms conn {:test4/norm1 {}}
                                              [:test4/norm1])))
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
-                            #"No data provided for norm :test4/norm1"
+                            #"No transactions provided for norm :test4/norm1"
                             (ensure-conforms conn {:test4/norm1 {:txes []}}
                                              [:test4/norm1]))))))
 
