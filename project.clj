@@ -1,4 +1,4 @@
-(defproject io.rkn/conformity "0.3.5-SNAPSHOT"
+(defproject io.rkn/conformity "0.3.5"
   :description "Idempotent datom transacting for Datomic.\n\nSpecial thanks to Stuart Halloway for the original idea, implementation and permission to take it and run."
   :url "http://github.com/rkneufeld/conformity"
   :license {:name "Eclipse Public License"

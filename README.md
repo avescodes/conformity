@@ -10,14 +10,14 @@ In a more general sense, conformity allows you to declare expectations (in the f
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
 ```clojure
-[io.rkn/conformity "0.3.4"]
+[io.rkn/conformity "0.3.5"]
 ```
 
 
 ## Usage
 
 The easiest way to use conformity is to store your norms in an edn file that lives in your `resources/` folder.
- 
+
 ```clojure
 ;; resources/something.edn
 {:my-project/something-schema
