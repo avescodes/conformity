@@ -9,9 +9,8 @@ In a more general sense, conformity allows you to declare expectations (in the f
 ## Dependency
 
 Conformity is available on clojars, and can be included in your leiningen `project.clj` by adding the following to `:dependencies`:
-```clojure
-[io.rkn/conformity "0.3.5"]
-```
+
+[![Clojars Project](http://clojars.org/io.rkn/conformity/latest-version.svg)](http://clojars.org/io.rkn/conformity)
 
 
 ## Usage
