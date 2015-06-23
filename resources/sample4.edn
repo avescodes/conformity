@@ -1,0 +1,20 @@
+{:test4/norm1
+ {:txes [[{:db/ident :test/attribute1
+           :db/doc "test attribute 1"
+           :db/valueType :db.type/string
+           :db/cardinality :db.cardinality/one
+           :db/id #db/id[:db.part/db]
+           :db.install/_attribute :db.part/db}
+          {:db/ident :test/user
+           :db/doc "test user"
+           :db/valueType :db.type/string
+           :db/cardinality :db.cardinality/one
+           :db/id #db/id[:db.part/db]
+           :db.install/_attribute :db.part/db}
+          {:db/ident :test/transaction-metadata
+           :db/doc "annotates the transaction with metadata"
+           :db/id #db/id[:db.part/user]
+           :db/fn #db/fn
+           {:lang :clojure
+            :params [db metadata]
+            :code [(assoc metadata :db/id #db/id[:db.part/tx])]}}]]}}
