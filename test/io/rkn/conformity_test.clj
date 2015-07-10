@@ -132,3 +132,25 @@
         (is false "ensure-conforms should have thrown an exception")
         (catch Exception _
           (is true "Blew up like it was supposed to."))))))
+
+(deftest test-loads-norms-from-a-resource
+  (testing "loads a datomic schema from edn in a resource"
+    (let [sample-norms-map4 (read-resource "sample4.edn")
+          norm-name (key (first sample-norms-map4))
+          tx-count (count (:txes (sample-norms-map4 norm-name)))
+          conn (fresh-conn)]
+      (is (ensure-conforms conn sample-norms-map4))
+      (is (conforms-to? (db conn) norm-name tx-count))
+      (let [tx-meta {:test/user "bob"}
+            tx-result @(d/transact conn
+                                   [[:test/transaction-metadata tx-meta]
+                                    {:db/id (d/tempid :db.part/user)
+                                     :test/attribute1 "forty two"}])
+            rel (d/q '[:find ?user ?val
+                       :where
+                       [_ :test/attribute1 ?val ?tx]
+                       [?tx :test/user ?user]]
+                     (db conn))
+            [user val] (first rel)]
+        (is (= "bob" user))
+        (is (= "forty two" val))))))

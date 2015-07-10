@@ -19,13 +19,16 @@
                     index-attr index}
                    tx))}))
 
-(defn load-schema-rsc
-  "Load an edn schema resource file"
-  [resource-filename]
-  (-> resource-filename
-      io/resource
-      slurp
-      read-string))
+(defn read-resource
+  "Reads and returns data from a resource containing edn text. An
+  optional argument allows specifying opts for clojure.edn/read"
+  ([resource-name]
+   (read-resource {:readers *data-readers*} resource-name))
+  ([opts resource-name]
+   (->> (io/resource resource-name)
+        (io/reader)
+        (java.io.PushbackReader.)
+        (clojure.edn/read opts))))
 
 (defn index-attr
   "Returns the index-attr corresponding to a conformity-attr"
