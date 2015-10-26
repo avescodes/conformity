@@ -96,10 +96,18 @@
             count
             (= tx-count)))))
 
+(defn maybe-timeout-synch-schema [conn maybe-timeout]
+  (if maybe-timeout
+    (let [result (deref (d/sync-schema conn (d/basis-t (d/db conn))) maybe-timeout ::timed-out)]
+      (if (= result ::timed-out)
+        (throw (ex-info "Timed out calling synch-schema between conformity transactions" {:timeout maybe-timeout}))
+        result))
+    @(d/sync-schema conn (d/basis-t (d/db conn)))))
+
 (defn reduce-txes
   "Reduces the seq of transactions for a norm into a transaction
   result accumulator"
-  [acc conn norm-attr norm-name txes]
+  [acc conn norm-attr norm-name txes sync-schema-timeout]
   (reduce
    (fn [acc [tx-index tx]]
      (try
@@ -107,6 +115,7 @@
                       norm-attr norm-name
                       (index-attr norm-attr) tx-index
                       tx]
+             _ (maybe-timeout-synch-schema conn sync-schema-timeout)
              tx-result @(d/transact conn [safe-tx])]
          (if (next (:tx-data tx-result))
            (conj acc {:norm-name norm-name
@@ -126,22 +135,23 @@
   "Reduces norms from a norm-map specified by a seq of norm-names into
   a transaction result accumulator"
   [acc conn norm-attr norm-map norm-names]
-  (reduce
-   (fn [acc norm-name]
-     (let [{:keys [txes requires]} (get norm-map norm-name)]
-       (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
-             acc
-             (empty? txes)
-             (let [reason (str "No transactions provided for norm " norm-name)
-                   data {:succeeded acc
-                         :failed {:norm-name norm-name
-                                  :reason reason}}]
-               (throw (ex-info reason data)))
-             :else
-             (-> acc
-                 (reduce-norms conn norm-attr norm-map requires)
-                 (reduce-txes conn norm-attr norm-name txes)))))
-   acc norm-names))
+  (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
+    (reduce
+      (fn [acc norm-name]
+        (let [{:keys [txes requires]} (get norm-map norm-name)]
+          (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
+                acc
+                (empty? txes)
+                (let [reason (str "No transactions provided for norm " norm-name)
+                      data {:succeeded acc
+                            :failed {:norm-name norm-name
+                                     :reason reason}}]
+                  (throw (ex-info reason data)))
+                :else
+                (-> acc
+                  (reduce-norms conn norm-attr norm-map requires)
+                  (reduce-txes conn norm-attr norm-name txes sync-schema-timeout)))))
+      acc norm-names)))
 
 (defn ensure-conforms
   "Ensure that norms represented as datoms are conformed-to (installed), be they
