@@ -37,6 +37,19 @@
                         {:txes [(attr :test/attribute3)]
                          :requires [:test3/norm1]}})
 
+(def sample-norms-map5 {:test4/norm1
+                        {:txes [[{:db/id (d/tempid :db.part/db)
+                                  :db/ident :test/unique-attribute
+                                  :db/valueType :db.type/string
+                                  :db/cardinality :db.cardinality/one
+                                  :db.install/_attribute :db.part/db}]
+                                [{:db/id :test/unique-attribute
+                                  :db/index true
+                                  :db.alter/_attribute :db.part/db}]
+                                [{:db/id :test/unique-attribute
+                                  :db/unique :db.unique/value
+                                  :db.alter/_attribute :db.part/db}]]}})
+
 (deftest test-ensure-conforms
   (testing "installs all expected norms"
 
@@ -49,6 +62,11 @@
         (is (has-attribute? (db conn) :test/attribute2))
         (is (has-attribute? (db conn) :test/attribute3))
         (is (empty? (ensure-conforms conn sample-norms-map1)))))
+
+    (testing "can add db/unique after an avet index add"
+      (let [conn (fresh-conn)
+            result (ensure-conforms conn sample-norms-map5)]
+        (is (has-attribute? (db conn) :test/unique-attribute))))
 
     (testing "with explicit norms list"
       (let [conn (fresh-conn)
