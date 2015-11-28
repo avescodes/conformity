@@ -103,6 +103,55 @@
                             (ensure-conforms conn {:test4/norm1 {:txes []}}
                                              [:test4/norm1]))))))
 
+(deftest test-with-conforms
+  (testing "speculatively installs all expected norms"
+
+    (testing "without explicit norms list"
+      (let [{:keys [db result]} (with-conforms (d/db (fresh-conn)) sample-norms-map1)]
+        (is (= (set (map (juxt :norm-name :tx-index) result))
+               (set [[:test1/norm1 0] [:test1/norm1 1] [:test1/norm2 0]])))
+        (is (has-attribute? db :test/attribute1))
+        (is (has-attribute? db :test/attribute2))
+        (is (has-attribute? db :test/attribute3))
+        (is (empty? (:result (with-conforms db sample-norms-map1))))))
+
+    (testing "can add db/unique after an avet index add"
+      (let [{:keys [db result]} (with-conforms (d/db (fresh-conn)) sample-norms-map5)]
+        (is (has-attribute? db :test/unique-attribute))))
+
+    (testing "with explicit norms list"
+      (let [{:keys [db result]} (with-conforms (d/db (fresh-conn)) sample-norms-map2 [:test2/norm1])]
+        (is (= (map (juxt :norm-name :tx-index) result)
+               [[:test2/norm1 0]]))
+        (is (has-attribute? db :test/attribute1))
+        (is (not (has-attribute? db :test/attribute2)))
+        (is (empty? (:result (with-conforms db sample-norms-map2 [:test2/norm1])))))
+
+      (testing "and requires"
+        (let [{:keys [db result]} (with-conforms (d/db (fresh-conn)) sample-norms-map3 [:test3/norm2])]
+          (is (= (map (juxt :norm-name :tx-index) result)
+                 [[:test3/norm1 0] [:test3/norm1 1] [:test3/norm2 0]]))
+          (is (has-attribute? db :test/attribute1))
+          (is (has-attribute? db :test/attribute2))
+          (is (has-attribute? db :test/attribute3))
+          (is (empty? (:result (with-conforms db sample-norms-map3
+                                 [:test3/norm2]))))))))
+
+  (testing "throws exception if norm-map lacks transactions for a norm"
+    (let [db (d/db (fresh-conn))]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"No transactions provided for norm :test4/norm1"
+                            (with-conforms db {}
+                                             [:test4/norm1])))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"No transactions provided for norm :test4/norm1"
+                            (with-conforms db {:test4/norm1 {}}
+                                             [:test4/norm1])))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"No transactions provided for norm :test4/norm1"
+                            (with-conforms db {:test4/norm1 {:txes []}}
+                                             [:test4/norm1]))))))
+
 (deftest test-conforms-to?
   (let [tx-count (count (:txes (sample-norms-map1 :test1/norm1)))]
     (testing "returns true if a norm is already installed"

@@ -179,3 +179,42 @@
   ([conn conformity-attr norm-map norm-names]
    (ensure-conformity-schema conn conformity-attr)
    (reduce-norms [] conn conformity-attr norm-map norm-names)))
+
+(defn- speculative-conn
+  "Creates a mock datomic.Connection that speculatively applies transactions using datomic.api/with"
+  [db]
+  (let [state (atom {:db-after db})
+        wrap-listenable-future (fn [value]
+                                 (reify datomic.ListenableFuture
+                                   (get [this] value)
+                                   (get [this timeout time-unit] value)
+                                   (toString [this] (prn-str value))))]
+    (reify datomic.Connection
+      (db [_] (:db-after @state))
+      (transact [_ tx-data]
+        (let [tx-result-after (swap! state #(d/with (:db-after %) tx-data))]
+          (wrap-listenable-future tx-result-after)))
+      (sync [_] (wrap-listenable-future (:db-after @state)))
+      (sync [_ t] (wrap-listenable-future (:db-after @state)))
+      (syncSchema [_ t] (wrap-listenable-future (:db-after @state))))))
+
+(defn with-conforms
+  "Variation of ensure-conforms that speculatively ensures norm are conformed to
+
+   On success, returns a map with:
+     :db     the resulting database that conforms the the provided norms
+     :result a vector of maps with values for :norm-name, :tx-index,
+             and :tx-result for each transaction that improved the db's conformity.
+
+   On failure, throws an ex-info with a reason and data about any partial
+   success before the failure."
+  ([db norm-map]
+   (with-conforms db norm-map (keys norm-map)))
+  ([db norm-map norm-names]
+   (with-conforms db default-conformity-attribute norm-map norm-names))
+  ([db conformity-attr norm-map norm-names]
+   (let [conn (speculative-conn db)]
+     (ensure-conformity-schema conn conformity-attr)
+     (let [result (reduce-norms [] conn conformity-attr norm-map norm-names)]
+       {:db (d/db conn)
+        :result result}))))
