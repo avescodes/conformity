@@ -70,7 +70,7 @@ You can see this more directly illustrated in a console…
 
 ### Schema dependencies
 
-The `{:txes [...]}` can also have a `:requires` attribute, which points to the keyword/ident of so9me other such map which it depends on having been already transacted before it can be. This is declarative; Once specified in the map passed to `ensure-conforms`, confirmity handles the rest.
+The `{:txes [...]}` can also have a `:requires` attribute, which points to the keyword/ident of some other such map which it depends on having been already transacted before it can be. This is declarative; Once specified in the map passed to `ensure-conforms`, confirmity handles the rest.
 
 ### Caveat: Norms only get conformed-to once!
 
