@@ -67,6 +67,11 @@ You can see this more directly illustrated in a console…
 (c/has-attribute? (d/db conn) :something/title)
 ; -> true
 ```
+
+### Schema dependencies
+
+The `{:txes [...]}` can also have a `:requires` attribute, which points to the keyword/ident of some other such map which it depends on having been already transacted before it can be. This is declarative; Once specified in the map passed to `ensure-conforms`, confirmity handles the rest.
+
 ### Caveat: Norms only get conformed-to once!
 
 Once a norm is conformed to that's it! *It won't be transacted again*. That does mean that **you shouldn't edit a norm and expect it to magically get updated** the next time `ensure-conforms` runs.
