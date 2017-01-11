@@ -2,7 +2,7 @@
   (:require [datomic.api :refer [q db] :as d]
             [clojure.java.io :as io]))
 
-(def default-conformity-attribute :confirmity/conformed-norms)
+(def default-conformity-attribute :conformity/conformed-norms)
 (def conformity-ensure-norm-tx :conformity/ensure-norm-tx)
 
 (def ensure-norm-tx-txfn
