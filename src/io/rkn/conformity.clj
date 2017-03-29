@@ -2,7 +2,7 @@
   (:require [datomic.api :refer [q db] :as d]
             [clojure.java.io :as io]))
 
-(def default-conformity-attribute :confirmity/conformed-norms)
+(def ^:deprecated default-conformity-attribute :confirmity/conformed-norms)
 (def conformity-ensure-norm-tx :conformity/ensure-norm-tx)
 
 (def ensure-norm-tx-txfn
@@ -50,6 +50,12 @@
       :db/fn
       boolean))
 
+(defn default-conformity-attribute-for-db
+  "Returns the default-conformity-attribute for a db."
+  [db]
+  (or (some #(and (has-attribute? db %) %) [:conformity/conformed-norms default-conformity-attribute])
+      :conformity/conformed-norms))
+
 (defn ensure-conformity-schema
   "Ensure that the two attributes and one transaction function
   required to track conformity via the conformity-attr keyword
@@ -85,7 +91,7 @@
       norm             the keyword name of the norm you want to check
       tx-count         the count of transactions for that norm"
   ([db norm tx-count]
-   (conforms-to? db default-conformity-attribute norm tx-count))
+   (conforms-to? db (default-conformity-attribute-for-db db) norm tx-count))
   ([db conformity-attr norm tx-count]
    (and (has-attribute? db conformity-attr)
         (pos? tx-count)
@@ -175,7 +181,7 @@
   ([conn norm-map]
    (ensure-conforms conn norm-map (keys norm-map)))
   ([conn norm-map norm-names]
-   (ensure-conforms conn default-conformity-attribute norm-map norm-names))
+   (ensure-conforms conn (default-conformity-attribute-for-db (d/db conn)) norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
    (ensure-conformity-schema conn conformity-attr)
    (reduce-norms [] conn conformity-attr norm-map norm-names)))
@@ -211,7 +217,7 @@
   ([db norm-map]
    (with-conforms db norm-map (keys norm-map)))
   ([db norm-map norm-names]
-   (with-conforms db default-conformity-attribute norm-map norm-names))
+   (with-conforms db (default-conformity-attribute-for-db db) norm-map norm-names))
   ([db conformity-attr norm-map norm-names]
    (let [conn (speculative-conn db)]
      (ensure-conformity-schema conn conformity-attr)

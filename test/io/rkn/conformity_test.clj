@@ -101,7 +101,22 @@
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
                             #"No transactions provided for norm :test4/norm1"
                             (ensure-conforms conn {:test4/norm1 {:txes []}}
-                                             [:test4/norm1]))))))
+                                             [:test4/norm1])))))
+
+  (testing "it uses the corrected spelling of the default-conformity-attribute on a new db"
+    (let [conn (fresh-conn)]
+      (ensure-conforms conn sample-norms-map1)
+      (is (= false (has-attribute? (db conn) :confirmity/conformed-norms)))
+      (is (= true (has-attribute? (db conn) :conformity/conformed-norms)))))
+
+  (testing "it continues to use the bad spelling of the default-conformity-attribute if already installed"
+    (let [conn (fresh-conn)]
+      (ensure-conforms conn :confirmity/conformed-norms sample-norms-map1 (keys sample-norms-map1))
+      (is (= true (has-attribute? (db conn) :confirmity/conformed-norms)))
+      (is (= false (has-attribute? (db conn) :conformity/conformed-norms)))
+      (ensure-conforms conn sample-norms-map1)
+      (is (= true (has-attribute? (db conn) :confirmity/conformed-norms)))
+      (is (= false (has-attribute? (db conn) :conformity/conformed-norms))))))
 
 (deftest test-with-conforms
   (testing "speculatively installs all expected norms"
