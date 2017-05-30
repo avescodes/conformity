@@ -1,7 +1,8 @@
 (ns io.rkn.conformity-test
   (:require [clojure.test :refer :all]
             [io.rkn.conformity :refer :all]
-            [datomic.api :refer [q db] :as d]))
+            [datomic.api :refer [q db] :as d]
+            [migrations.txes :refer [txes-foo txes-bar]]))
 
 (def uri  "datomic:mem://test")
 (defn fresh-conn []
@@ -49,6 +50,11 @@
                                 [{:db/id :test/unique-attribute
                                   :db/unique :db.unique/value
                                   :db.alter/_attribute :db.part/db}]]}})
+
+(def sample-norms-map-txes-fns {:test-txes-fn/norm1
+                                {:txes-fn 'migrations.txes/txes-foo}
+                                :test-txes-fn/norm2
+                                {:txes-fn 'migrations.txes/txes-bar}})
 
 (deftest test-ensure-conforms
   (testing "installs all expected norms"
@@ -218,11 +224,10 @@
 (deftest test-loads-norms-from-a-resource
   (testing "loads a datomic schema from edn in a resource"
     (let [sample-norms-map4 (read-resource "sample4.edn")
-          norm-name (key (first sample-norms-map4))
-          tx-count (count (:txes (sample-norms-map4 norm-name)))
+          tx-count (count (:txes (sample-norms-map4 :test4/norm1)))
           conn (fresh-conn)]
       (is (ensure-conforms conn sample-norms-map4))
-      (is (conforms-to? (db conn) norm-name tx-count))
+      (is (conforms-to? (db conn) :test4/norm1 tx-count))
       (let [tx-meta {:test/user "bob"}
             tx-result @(d/transact conn
                                    [[:test/transaction-metadata tx-meta]
@@ -235,9 +240,24 @@
                      (db conn))
             [user val] (first rel)]
         (is (= "bob" user))
-        (is (= "forty two" val))))))
+        (is (= "forty two" val)))))
+  (testing "loads txes from from txes-fn reference in a resource"
+    (let [sample-norms-map4 (read-resource "sample4.edn")
+          conn (fresh-conn)]
+      (is (ensure-conforms conn sample-norms-map4))
+      (let [ret (d/q '[:find ?e
+                       :where
+                       [?e :db/ident :txes-fn/foo-1]]
+                     (db conn))]
+        (is (= 1 (count ret)))))))
 
 (deftest get-norm-gets-norms
   (testing "get-norm loads :txes key from norms-map"
     (is (:test1/norm1 sample-norms-map1)
-        (get-norm sample-norms-map1 :test1/norm1))))
+        (get-norm (fresh-conn) sample-norms-map1 :test1/norm1)))
+  (testing "get-norm loads :txes-fn key from norms-map"
+    (let [conn (fresh-conn)]
+      (is (txes-foo conn)
+          (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm1)))
+      (is (txes-bar conn)
+          (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm2))))))

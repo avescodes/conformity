@@ -137,9 +137,18 @@
            (throw (ex-info reason data t))))))
    acc (map-indexed vector txes)))
 
+(defn eval-txes-fn
+  [conn txes-fn]
+  (try (require (symbol (namespace txes-fn)))
+       {:txes ((resolve txes-fn) conn)}
+       (catch Throwable t
+         {:exc (str "Exception evaluating " txes-fn ": " t)})))
+
 (defn get-norm
-  [norm-map norm-name]
-  (get norm-map norm-name))
+  [conn norm-map norm-name]
+  (let [{:keys [txes txes-fn] :as norm} (get norm-map norm-name)]
+    (cond-> norm
+      txes-fn (merge (eval-txes-fn conn txes-fn)))))
 
 (defn reduce-norms
   "Reduces norms from a norm-map specified by a seq of norm-names into
@@ -148,15 +157,19 @@
   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
     (reduce
       (fn [acc norm-name]
-        (let [{:keys [txes requires]} (get-norm norm-map norm-name)]
+        (let [{:keys [txes requires exc]} (get-norm conn norm-map norm-name)]
           (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
                 acc
+
                 (empty? txes)
-                (let [reason (str "No transactions provided for norm " norm-name)
+                (let [reason (or exc
+                                 (str "No transactions provided for norm "
+                                      norm-name))
                       data {:succeeded acc
                             :failed {:norm-name norm-name
                                      :reason reason}}]
                   (throw (ex-info reason data)))
+
                 :else
                 (-> acc
                   (reduce-norms conn norm-attr norm-map requires)
@@ -172,6 +185,9 @@
       norm-map         a map from norm names to data maps.
                        a data map contains:
                          :txes     - the data to install
+                         :txes-fn  - An alternative to txes, pointing to a
+                                     symbol representing a fn on the classpath that
+                                     will return transactions.
                          :requires - (optional) a list of prerequisite norms
                                      in norm-map.
       norm-names       (optional) A collection of names of norms to conform to.
