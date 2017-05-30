@@ -236,3 +236,8 @@
             [user val] (first rel)]
         (is (= "bob" user))
         (is (= "forty two" val))))))
+
+(deftest get-norm-gets-norms
+  (testing "get-norm loads :txes key from norms-map"
+    (is (:test1/norm1 sample-norms-map1)
+        (get-norm sample-norms-map1 :test1/norm1))))

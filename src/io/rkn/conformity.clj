@@ -137,6 +137,10 @@
            (throw (ex-info reason data t))))))
    acc (map-indexed vector txes)))
 
+(defn get-norm
+  [norm-map norm-name]
+  (get norm-map norm-name))
+
 (defn reduce-norms
   "Reduces norms from a norm-map specified by a seq of norm-names into
   a transaction result accumulator"
@@ -144,7 +148,7 @@
   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
     (reduce
       (fn [acc norm-name]
-        (let [{:keys [txes requires]} (get norm-map norm-name)]
+        (let [{:keys [txes requires]} (get-norm norm-map norm-name)]
           (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
                 acc
                 (empty? txes)
