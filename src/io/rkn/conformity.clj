@@ -142,7 +142,7 @@
   (try (require (symbol (namespace txes-fn)))
        {:txes ((resolve txes-fn) conn)}
        (catch Throwable t
-         {:exc (str "Exception evaluating " txes-fn ": " t)})))
+         {:ex (str "Exception evaluating " txes-fn ": " t)})))
 
 (defn get-norm
   [conn norm-map norm-name]
@@ -157,12 +157,12 @@
   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
     (reduce
       (fn [acc norm-name]
-        (let [{:keys [txes requires exc]} (get-norm conn norm-map norm-name)]
+        (let [{:keys [txes requires ex]} (get-norm conn norm-map norm-name)]
           (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
                 acc
 
                 (empty? txes)
-                (let [reason (or exc
+                (let [reason (or ex
                                  (str "No transactions provided for norm "
                                       norm-name))
                       data {:succeeded acc
