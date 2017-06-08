@@ -75,10 +75,33 @@ Instead of using the `:txes` key to point to an inline transaction, you can also
 ```clojure
 ;; resources/something.edn
 {:my-project/something-else-schema
-  {:txes-fn 'my-project.migrations.txes/insert-seeds}}
+  {:txes-fn 'my-project.migrations.txes/backport-bar-attr-to-entities-with-foo}}
 ```
 
-This function will be passed the Datomic connection and should return transaction data in the format described above, allowing transactions to be driven by full-fledged inspection of the database.
+`backport-bar-attr-to-entities-with-foo` will be passed the Datomic connection and should return transaction data, allowing transactions to be driven by full-fledged inspection of the database.
+
+For example...
+
+```clojure
+(ns my-project.migrations.txes
+  (:require [datomic.api :as d])
+
+(def find-eids-with-attr
+  '[:find [?e ...]
+    :in $ ?attr
+    :where
+    [?e ?attr]])
+
+(defn backport-bar-attr-to-entities-with-foo
+  "Find existing entities bearing the `:some/foo` attribute,
+   and apply to them the `:some/bar` attribute and value."
+  [conn]
+  (let [foo-eids (d/q find-eids-with-attr (d/db conn) :some/foo)
+        tx-data  (for [eid foo-eids]
+                   {:db/id eid
+                    :some/bar :bar-value})]
+    tx-data))
+```
 
 
 ### Schema dependencies
