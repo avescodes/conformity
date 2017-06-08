@@ -2,7 +2,7 @@
 
 A Clojure/Datomic library for idempotently transacting datoms (norms) into your database – be they schema, data, or otherwise.
 
-In the simplest sense, conformity allows you to write schema migrations and ensure that they run once and only once.
+In the simplest sense, conformity allows you to write migrations and ensure that they run once and only once.
 
 In a more general sense, conformity allows you to declare expectations (in the form of norms) about the state of your database, and enforce those idempotently without repeatedly transacting schema, required data, etc.
 
@@ -68,9 +68,45 @@ You can see this more directly illustrated in a console…
 ; -> true
 ```
 
+### Migrations as code
+
+Instead of using the `:txes` key to point to an inline transaction, you can also use a `:txes-fn` key pointing to a symbol reference to a function, as follows...
+
+```clojure
+;; resources/something.edn
+{:my-project/something-else-schema
+  {:txes-fn 'my-project.migrations.txes/backport-bar-attr-to-entities-with-foo}}
+```
+
+`backport-bar-attr-to-entities-with-foo` will be passed the Datomic connection and should return transaction data, allowing transactions to be driven by full-fledged inspection of the database.
+
+For example...
+
+```clojure
+(ns my-project.migrations.txes
+  (:require [datomic.api :as d])
+
+(def find-eids-with-attr
+  '[:find [?e ...]
+    :in $ ?attr
+    :where
+    [?e ?attr]])
+
+(defn backport-bar-attr-to-entities-with-foo
+  "Find existing entities bearing the `:some/foo` attribute,
+   and apply to them the `:some/bar` attribute and value."
+  [conn]
+  (let [foo-eids (d/q find-eids-with-attr (d/db conn) :some/foo)
+        tx-data  (for [eid foo-eids]
+                   {:db/id eid
+                    :some/bar :bar-value})]
+    tx-data))
+```
+
+
 ### Schema dependencies
 
-The `{:txes [...]}` can also have a `:requires` attribute, which points to the keyword/ident of some other such map which it depends on having been already transacted before it can be. This is declarative; Once specified in the map passed to `ensure-conforms`, confirmity handles the rest.
+Norms can also carry a `:requires` attribute, which points to the keyword/ident of some other such map which it depends on having been already transacted before it can be. This is declarative; Once specified in the map passed to `ensure-conforms`, confirmity handles the rest.
 
 ### Caveat: Norms only get conformed-to once!
 

@@ -17,4 +17,7 @@
            :db/fn #db/fn
            {:lang :clojure
             :params [db metadata]
-            :code [(assoc metadata :db/id #db/id[:db.part/tx])]}}]]}}
+            :code [(assoc metadata :db/id #db/id[:db.part/tx])]}}]]}
+
+ :test4/norm2
+ {:txes-fn migrations.txes/txes-foo}}
