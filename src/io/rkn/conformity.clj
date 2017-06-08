@@ -138,6 +138,11 @@
    acc (map-indexed vector txes)))
 
 (defn eval-txes-fn
+  "Given a connection and a symbol referencing a function on the classpath...
+     - `require` the symbol's namespace
+     - `resolve` the symbol
+     - evaluate the function, passing it the connection
+     - return the result"
   [conn txes-fn]
   (try (require (symbol (namespace txes-fn)))
        {:txes ((resolve txes-fn) conn)}
@@ -145,6 +150,9 @@
          {:ex (str "Exception evaluating " txes-fn ": " t)})))
 
 (defn get-norm
+  "Pull from `norm-map` the `norm-name` value. If the norm contains a
+  `txes-fn` key, allow processing of that key to stand in for a `txes`
+  value. Returns the value containing transactable data."
   [conn norm-map norm-name]
   (let [{:keys [txes txes-fn] :as norm} (get norm-map norm-name)]
     (cond-> norm
