@@ -249,13 +249,20 @@
                      (db conn))]
         (is (= 1 (count ret)))))))
 
-(deftest get-norm-gets-norms
+(defn txes= [a b]
+  (letfn [(drop-id [xs]
+            (mapv #(dissoc % :db/id)
+                  xs))]
+    (= (map drop-id a)
+       (map drop-id b))))
+
+(deftest test-get-norm-gets-norms
   (testing "get-norm loads :txes key from norms-map"
-    (is (:test1/norm1 sample-norms-map1)
-        (get-norm (fresh-conn) sample-norms-map1 :test1/norm1)))
+    (is (= (:test1/norm1 sample-norms-map1)
+           (get-norm (fresh-conn) sample-norms-map1 :test1/norm1))))
   (testing "get-norm loads :txes-fn key from norms-map"
     (let [conn (fresh-conn)]
-      (is (txes-foo conn)
-          (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm1)))
-      (is (txes-bar conn)
-          (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm2))))))
+      (is (txes= (txes-foo conn)
+                 (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm1))))
+      (is (txes= (txes-bar conn)
+                 (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm2)))))))
