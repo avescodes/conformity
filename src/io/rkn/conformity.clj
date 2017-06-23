@@ -164,25 +164,25 @@
   [acc conn norm-attr norm-map norm-names]
   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
     (reduce
-      (fn [acc norm-name]
-        (let [{:keys [txes requires ex]} (get-norm conn norm-map norm-name)]
-          (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
-                acc
+     (fn [acc norm-name]
+       (let [{:keys [txes requires ex]} (get-norm conn norm-map norm-name)]
+         (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
+               acc
 
-                (empty? txes)
-                (let [reason (or ex
-                                 (str "No transactions provided for norm "
-                                      norm-name))
-                      data {:succeeded acc
-                            :failed {:norm-name norm-name
-                                     :reason reason}}]
-                  (throw (ex-info reason data)))
+               (empty? txes)
+               (let [reason (or ex
+                                (str "No transactions provided for norm "
+                                     norm-name))
+                     data {:succeeded acc
+                           :failed {:norm-name norm-name
+                                    :reason reason}}]
+                 (throw (ex-info reason data)))
 
-                :else
-                (-> acc
-                  (reduce-norms conn norm-attr norm-map requires)
-                  (reduce-txes conn norm-attr norm-name txes sync-schema-timeout)))))
-      acc norm-names)))
+               :else
+               (-> acc
+                   (reduce-norms conn norm-attr norm-map requires)
+                   (reduce-txes conn norm-attr norm-name txes sync-schema-timeout)))))
+     acc norm-names)))
 
 (defn ensure-conforms
   "Ensure that norms represented as datoms are conformed-to (installed), be they
