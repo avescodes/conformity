@@ -266,3 +266,11 @@
                  (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm1))))
       (is (txes= (txes-bar conn)
                  (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm2)))))))
+
+(deftest test-requires-transacted-eagerly
+  (testing "required norms transacted prior to evaluation of requiring `txes-fn` norms"
+    (let [conn  (fresh-conn)
+          norms (read-resource "requiring-sample.edn")]
+      (ensure-conforms conn norms [:requiring/dependent])
+      (let [ret (d/q '[:find ?v :with ?e :where [?e :preferences/color ?v]] (d/db conn))]
+        (is (= [["orange"]] ret))))))

@@ -165,7 +165,10 @@
   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
     (reduce
      (fn [acc norm-name]
-       (let [{:keys [txes requires ex]} (get-norm conn norm-map norm-name)]
+       (let [requires (-> norm-map norm-name :requires)
+             acc (cond-> acc
+                   requires (reduce-norms conn norm-attr norm-map requires))
+             {:keys [txes ex]} (get-norm conn norm-map norm-name)]
          (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
                acc
 
@@ -179,9 +182,7 @@
                  (throw (ex-info reason data)))
 
                :else
-               (-> acc
-                   (reduce-norms conn norm-attr norm-map requires)
-                   (reduce-txes conn norm-attr norm-name txes sync-schema-timeout)))))
+               (reduce-txes acc conn norm-attr norm-name txes sync-schema-timeout))))
      acc norm-names)))
 
 (defn ensure-conforms
