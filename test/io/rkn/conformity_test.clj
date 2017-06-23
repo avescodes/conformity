@@ -215,11 +215,9 @@
 (deftest test-fails-on-bad-norm
   (testing "It explodes when you pass it a bad norm"
     (let [conn (fresh-conn)]
-      (try
-        (ensure-conforms conn sample-norms-map1 [:test2/norm2])
-        (is false "ensure-conforms should have thrown an exception")
-        (catch Exception _
-          (is true "Blew up like it was supposed to."))))))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #":db.error/not-an-entity Unable to resolve entity: :db.type/nosuch"
+                            (ensure-conforms conn sample-norms-map2 [:test2/norm2]))))))
 
 (deftest test-loads-norms-from-a-resource
   (testing "loads a datomic schema from edn in a resource"
