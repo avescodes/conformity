@@ -215,11 +215,9 @@
 (deftest test-fails-on-bad-norm
   (testing "It explodes when you pass it a bad norm"
     (let [conn (fresh-conn)]
-      (try
-        (ensure-conforms conn sample-norms-map1 [:test2/norm2])
-        (is false "ensure-conforms should have thrown an exception")
-        (catch Exception _
-          (is true "Blew up like it was supposed to."))))))
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #":db.error/not-an-entity Unable to resolve entity: :db.type/nosuch"
+                            (ensure-conforms conn sample-norms-map2 [:test2/norm2]))))))
 
 (deftest test-loads-norms-from-a-resource
   (testing "loads a datomic schema from edn in a resource"
@@ -251,13 +249,28 @@
                      (db conn))]
         (is (= 1 (count ret)))))))
 
-(deftest get-norm-gets-norms
+(defn txes= [a b]
+  (letfn [(drop-id [xs]
+            (mapv #(dissoc % :db/id)
+                  xs))]
+    (= (map drop-id a)
+       (map drop-id b))))
+
+(deftest test-get-norm-gets-norms
   (testing "get-norm loads :txes key from norms-map"
-    (is (:test1/norm1 sample-norms-map1)
-        (get-norm (fresh-conn) sample-norms-map1 :test1/norm1)))
+    (is (= (:test1/norm1 sample-norms-map1)
+           (get-norm (fresh-conn) sample-norms-map1 :test1/norm1))))
   (testing "get-norm loads :txes-fn key from norms-map"
     (let [conn (fresh-conn)]
-      (is (txes-foo conn)
-          (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm1)))
-      (is (txes-bar conn)
-          (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm2))))))
+      (is (txes= (txes-foo conn)
+                 (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm1))))
+      (is (txes= (txes-bar conn)
+                 (:txes (get-norm conn sample-norms-map-txes-fns :test-txes-fn/norm2)))))))
+
+(deftest test-requires-transacted-eagerly
+  (testing "required norms transacted prior to evaluation of requiring `txes-fn` norms"
+    (let [conn  (fresh-conn)
+          norms (read-resource "requiring-sample.edn")]
+      (ensure-conforms conn norms [:requiring/dependent])
+      (let [ret (d/q '[:find ?v :with ?e :where [?e :preferences/color ?v]] (d/db conn))]
+        (is (= [["orange"]] ret))))))
