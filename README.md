@@ -100,7 +100,7 @@ For example...
         tx-data  (for [eid foo-eids]
                    {:db/id eid
                     :some/bar :bar-value})]
-    tx-data))
+    [tx-data]))
 ```
 
 
