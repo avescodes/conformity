@@ -10,5 +10,5 @@
 
 :requiring/dependent
  {:requires [:requiring/base]
-  :txes-fn migrations.requiring/txes}}
+  :txes-fn migrations.requiring/everyone-likes-orange-instead}}
 
