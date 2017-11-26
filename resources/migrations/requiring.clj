@@ -12,7 +12,7 @@
   (map first
        (d/q attr-q db attr val)))
 
-(defn txes
+(defn everyone-likes-orange-instead
   "Everybody who liked green now likes orange instead."
   [conn]
   (let [green-eids (find-eids-with-val-for-attr

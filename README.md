@@ -75,10 +75,10 @@ Instead of using the `:txes` key to point to an inline transaction, you can also
 ```clojure
 ;; resources/something.edn
 {:my-project/something-else-schema
-  {:txes-fn 'my-project.migrations.txes/backport-bar-attr-to-entities-with-foo}}
+  {:txes-fn 'my-project.migrations.txes/everyone-likes-orange-instead}}
 ```
 
-`backport-bar-attr-to-entities-with-foo` will be passed the Datomic connection and should return transaction data, allowing transactions to be driven by full-fledged inspection of the database.
+`everyone-likes-orange-instead` will be passed the Datomic connection and should return transaction data, allowing transactions to be driven by full-fledged inspection of the database.
 
 For example...
 
@@ -86,21 +86,27 @@ For example...
 (ns my-project.migrations.txes
   (:require [datomic.api :as d])
 
-(def find-eids-with-attr
-  '[:find [?e ...]
-    :in $ ?attr
+(def attr-q
+  '[:find ?e
+    :in $ ?attr ?v
     :where
-    [?e ?attr]])
+    [?e ?attr ?v]])
 
-(defn backport-bar-attr-to-entities-with-foo
-  "Find existing entities bearing the `:some/foo` attribute,
-   and apply to them the `:some/bar` attribute and value."
+(defn find-eids-with-val-for-attr
+  [db attr val]
+  (map first
+       (d/q attr-q db attr val)))
+
+(defn everyone-likes-orange-instead
+  "Everybody who liked green now likes orange instead."
   [conn]
-  (let [foo-eids (d/q find-eids-with-attr (d/db conn) :some/foo)
-        tx-data  (for [eid foo-eids]
-                   {:db/id eid
-                    :some/bar :bar-value})]
-    tx-data))
+  (let [green-eids (find-eids-with-val-for-attr
+                    (d/db conn)
+                    :preferences/color
+                    "green")]
+    [(for [eid green-eids]
+       [:db/add eid
+        :preferences/color "orange"])]))
 ```
 
 
