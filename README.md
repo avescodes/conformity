@@ -75,7 +75,7 @@ Instead of using the `:txes` key to point to an inline transaction, you can also
 ```clojure
 ;; resources/something.edn
 {:my-project/something-else-schema
-  {:txes-fn 'my-project.migrations.txes/everyone-likes-orange-instead}}
+  {:txes-fn my-project.migrations.txes/everyone-likes-orange-instead}}
 ```
 
 `everyone-likes-orange-instead` will be passed the Datomic connection and should return transaction data, allowing transactions to be driven by full-fledged inspection of the database.
