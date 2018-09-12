@@ -274,3 +274,61 @@
       (ensure-conforms conn norms [:requiring/dependent])
       (let [ret (d/q '[:find ?v :with ?e :where [?e :preferences/color ?v]] (d/db conn))]
         (is (= [["orange"]] ret))))))
+
+(deftest test-unchangeable-norms
+  (let [norms-map {:test-unchangeable/prep
+                   {:txes [[{:db/id (d/tempid :db.part/db)
+                             :db/ident :foo/id
+                             :db/valueType :db.type/string
+                             :db/unique :db.unique/value
+                             :db/cardinality :db.cardinality/one
+                             :db.install/_attribute :db.part/db}
+                            {:db/id (d/tempid :db.part/db)
+                             :db/ident :foo/bool
+                             :db/valueType :db.type/boolean
+                             :db/cardinality :db.cardinality/one
+                             :db.install/_attribute :db.part/db}
+                            {:db/id (d/tempid :db.part/db)
+                             :db/ident :foo/color
+                             :db/valueType :db.type/string
+                             :db/cardinality :db.cardinality/one
+                             :db.install/_attribute :db.part/db}]]}
+                   :test-unchangeable/populate
+                   {:txes [[{:db/id (d/tempid :db.part/user)
+                             :foo/id "bar"}]]
+                    :requires [:test-unchangeable/prep]}
+
+                   :test-unchangeable/migration
+                   {:txes [[{:db/id [:foo/id "bar"]
+                             :foo/bool true}]]
+                    :requires [:test-unchangeable/populate]}}
+        map-w-repeated-norm {:test-unchangeable/migration
+                             {:txes [[{:db/id [:foo/id "bar"]
+                                       :foo/bool true}]
+                                     [{:db/id [:foo/id "bar"]
+                                       :foo/color "green"}]]}}]
+    (testing "conforming a norm which name's known to had been conformed once should be skipped"
+
+      (testing "if norm isn't marked unchangeable, new element in txes will conform the norm again"
+        (let [conn (fresh-conn)]
+          (ensure-conforms conn norms-map)
+          (is (= (:foo/bool
+                   (d/entity (db conn) [:foo/id "bar"]))
+                 true))
+          (ensure-conforms conn map-w-repeated-norm)
+          (is (= (:foo/color
+                   (d/entity (db conn) [:foo/id "bar"]))
+                 "green"))))
+
+      (testing "if norm is marked unchangeable, new element in txes will not conform"
+        (let [conn (fresh-conn)]
+          (ensure-conforms conn norms-map)
+          (is (= (:foo/bool
+                   (d/entity (db conn) [:foo/id "bar"]))
+                 true))
+          (ensure-conforms conn
+                           (assoc-in map-w-repeated-norm
+                                     [:test-unchangeable/migration :first-time-only]
+                                     true))
+          (is (nil? (:foo/color
+                      (d/entity (db conn) [:foo/id "bar"])))))))))
