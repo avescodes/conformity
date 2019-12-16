@@ -25,10 +25,10 @@
   ([resource-name]
    (read-resource {:readers *data-readers*} resource-name))
   ([opts resource-name]
-   (->> (io/resource resource-name)
-        (io/reader)
-        (java.io.PushbackReader.)
-        (clojure.edn/read opts))))
+   (with-open [reader (->> (io/resource resource-name)
+                           (io/reader)
+                           (java.io.PushbackReader.))]
+     (clojure.edn/read opts reader))))
 
 (defn index-attr
   "Returns the index-attr corresponding to a conformity-attr"
