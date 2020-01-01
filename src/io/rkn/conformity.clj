@@ -158,6 +158,54 @@
     (cond-> norm
       txes-fn (merge (eval-txes-fn conn txes-fn)))))
 
+(defn handle-txes [acc conn norm-attr norm-name txes ex sync-schema-timeout]
+  "If a collection of txes data to transact is empty then return:
+  1. an info of what's been successfully transacted this far
+  2. a structure with info which norm failed and for what reason.
+
+  Run transaction for each element of txes collection otherwise."
+  (if (empty? txes)
+    (let [reason (or ex
+                     (str "No transactions provided for norm "
+                          norm-name))
+          data {:succeeded acc
+                :failed {:norm-name norm-name
+                         :reason reason}}]
+      (throw (ex-info reason data)))
+    (reduce-txes acc conn norm-attr norm-name txes sync-schema-timeout)))
+
+(defn first-time-only-conforms-to?
+  "If a norm is supposed to be first-time-only/not-changeable then the decision whether
+  a norm should be conformed is absence of norm name in conformed norms registry.
+
+  Does database have an unchangeable norm installed?
+
+      conformity-attr  (optional) the keyword name of the attribute used to
+                       track conformity
+      norm             the keyword name of the norm you want to check"
+  ([db norm]
+   (first-time-only-conforms-to? db (default-conformity-attribute-for-db db) norm))
+  ([db conformity-attr norm]
+   (and (has-attribute? db conformity-attr)
+        (ffirst (q '[:find ?nv
+                     :in $ ?na ?nv
+                     :where [?tx ?na ?nv]]
+                   db conformity-attr norm)))))
+
+(defn handle-first-time-only-norm
+  [acc conn norm-attr norm-map norm-name sync-schema-timeout]
+  (if (first-time-only-conforms-to? (db conn) norm-attr norm-name)
+    acc
+    (let [{:keys [txes ex]} (get-norm conn norm-map norm-name)]
+      (handle-txes acc conn norm-attr norm-name txes ex sync-schema-timeout))))
+
+(defn handle-mutable-norm
+  [acc conn norm-attr norm-map norm-name sync-schema-timeout]
+  (let [{:keys [txes ex]} (get-norm conn norm-map norm-name)]
+    (if (conforms-to? (db conn) norm-attr norm-name (count txes))
+      acc
+      (handle-txes acc conn norm-attr norm-name txes ex sync-schema-timeout))))
+
 (defn reduce-norms
   "Reduces norms from a norm-map specified by a seq of norm-names into
   a transaction result accumulator"
@@ -165,24 +213,12 @@
   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
     (reduce
      (fn [acc norm-name]
-       (let [requires (-> norm-map norm-name :requires)
+       (let [{:keys [requires first-time-only]} (get norm-map norm-name)
              acc (cond-> acc
-                   requires (reduce-norms conn norm-attr norm-map requires))
-             {:keys [txes ex]} (get-norm conn norm-map norm-name)]
-         (cond (conforms-to? (db conn) norm-attr norm-name (count txes))
-               acc
-
-               (empty? txes)
-               (let [reason (or ex
-                                (str "No transactions provided for norm "
-                                     norm-name))
-                     data {:succeeded acc
-                           :failed {:norm-name norm-name
-                                    :reason reason}}]
-                 (throw (ex-info reason data)))
-
-               :else
-               (reduce-txes acc conn norm-attr norm-name txes sync-schema-timeout))))
+                   requires (reduce-norms conn norm-attr norm-map requires))]
+         (if first-time-only
+           (handle-first-time-only-norm acc conn norm-attr norm-map norm-name sync-schema-timeout)
+           (handle-mutable-norm acc conn norm-attr norm-map norm-name sync-schema-timeout))))
      acc norm-names)))
 
 (defn ensure-conforms
@@ -193,12 +229,18 @@
                        track conformity
       norm-map         a map from norm names to data maps.
                        a data map contains:
-                         :txes     - the data to install
-                         :txes-fn  - An alternative to txes, pointing to a
-                                     symbol representing a fn on the classpath that
-                                     will return transactions.
-                         :requires - (optional) a list of prerequisite norms
-                                     in norm-map.
+                         :txes            - the data to install
+                         :txes-fn         - An alternative to txes, pointing to a
+                                            symbol representing a fn on the classpath that
+                                            will return transactions.
+                         :requires        - (optional) a list of prerequisite norms
+                                            in norm-map.
+                         :first-time-only - (optional) a boolean. If true, a norm will be
+                                            conformed only once. After that norm-name will
+                                            be permanently ignored. Any norm with same norm-name,
+                                            be it modification of the old one or now norm
+                                            named the same will not even be considered to conformed
+                                            as soon as the name reuse is detected.
       norm-names       (optional) A collection of names of norms to conform to.
                        Will use keys of norm-map if not provided.
 

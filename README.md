@@ -114,11 +114,32 @@ For example...
 
 Norms can also carry a `:requires` attribute, which points to the keyword/ident of some other such map which it depends on having been already transacted before it can be. This is declarative; Once specified in the map passed to `ensure-conforms`, confirmity handles the rest.
 
-### Caveat: Norms only get conformed-to once!
+### Norms versioning
 
-Once a norm is conformed to that's it! *It won't be transacted again*. That does mean that **you shouldn't edit a norm and expect it to magically get updated** the next time `ensure-conforms` runs.
+Most of the time your norms are supposed to be ran only once.
+Once a map gets conformed, a trace of that event will be left in Datomic.
+Then every trial of conforming the same norm will be ignored.
 
-In the future you may be able to intelligently version norms themselves, but I had to draw the line somewhere for the initial release.
+However keep in mind that:
+
+1. Conformity upon every `ensure-conforms` call will count how many `txes`
+(meaning number of collections of new facts, not a number of facts in one collection)
+you're trying to do. If that number is equal as it was before, nothing will happen.
+
+   If it's not, then the norm will be considered not fully transacted and each element from `txes` will
+get transacted again. **WARNING:** you shouldn't use it to alter migrations effect. It's meant to make up
+for conforms not being atomic. If you need to _fix_ your past migrations then write a new migration for it.
+
+2. To be capable of the above, Conformity has to evaluate `:txes-fn` every time `ensure-conforms` is ran.
+If you're sure you don't want to update your norms,
+add `:first-time-only` additional parameter to the norm map, as follows:
+
+```clojure
+{:my/migration
+ {:txes [[{:db/id [:foo/id "foo"]
+           :foo/bool true}]]
+  :first-time-only true}}
+```
 
 ## License
 
