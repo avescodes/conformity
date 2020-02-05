@@ -56,32 +56,53 @@
   (or (some #(and (has-attribute? db %) %) [:conformity/conformed-norms default-conformity-attribute])
       :conformity/conformed-norms))
 
+(defn last-tx-instant
+  "Returns a value of the :db/txInstant attribute of the last transaction."
+  [db]
+  (let [tx (-> db (d/basis-t) (d/t->tx))]
+    (ffirst (q '[:find ?inst
+                 :in $ ?tx
+                 :where [?tx :db/txInstant ?inst]]
+              db tx))))
+
+(defn with-tx-instant
+  "If instant is not nil, add it as the :db/txInstant attribute of transaction."
+  [instant tx-data]
+  (cond->> tx-data
+    instant (cons {:db/id (d/tempid :db.part/tx)
+                   :db/txInstant instant})))
+
 (defn ensure-conformity-schema
   "Ensure that the two attributes and one transaction function
   required to track conformity via the conformity-attr keyword
   parameter are installed in the database."
-  [conn conformity-attr]
-  (when-not (has-attribute? (db conn) conformity-attr)
-    (d/transact conn [{:db/id (d/tempid :db.part/db)
-                       :db/ident conformity-attr
-                       :db/valueType :db.type/keyword
-                       :db/cardinality :db.cardinality/one
-                       :db/doc "Name of this transaction's norm"
-                       :db/index true
-                       :db.install/_attribute :db.part/db}]))
-  (when-not (has-attribute? (db conn) (index-attr conformity-attr))
-    (d/transact conn [{:db/id (d/tempid :db.part/db)
-                       :db/ident (index-attr conformity-attr)
-                       :db/valueType :db.type/long
-                       :db/cardinality :db.cardinality/one
-                       :db/doc "Index of this transaction within its norm"
-                       :db/index true
-                       :db.install/_attribute :db.part/db}]))
-  (when-not (has-function? (db conn) conformity-ensure-norm-tx)
-    (d/transact conn [{:db/id (d/tempid :db.part/user)
-                       :db/ident conformity-ensure-norm-tx
-                       :db/doc "Ensures each norm tx is executed exactly once"
-                       :db/fn ensure-norm-tx-txfn}])))
+  ([conn conformity-attr]
+   (ensure-conformity-schema conn conformity-attr nil))
+  ([conn conformity-attr tx-instant]
+   (when-not (has-attribute? (db conn) conformity-attr)
+     (d/transact conn (with-tx-instant tx-instant
+                        [{:db/id (d/tempid :db.part/db)
+                          :db/ident conformity-attr
+                          :db/valueType :db.type/keyword
+                          :db/cardinality :db.cardinality/one
+                          :db/doc "Name of this transaction's norm"
+                          :db/index true
+                          :db.install/_attribute :db.part/db}])))
+   (when-not (has-attribute? (db conn) (index-attr conformity-attr))
+     (d/transact conn (with-tx-instant tx-instant
+                        [{:db/id (d/tempid :db.part/db)
+                          :db/ident (index-attr conformity-attr)
+                          :db/valueType :db.type/long
+                          :db/cardinality :db.cardinality/one
+                          :db/doc "Index of this transaction within its norm"
+                          :db/index true
+                          :db.install/_attribute :db.part/db}])))
+   (when-not (has-function? (db conn) conformity-ensure-norm-tx)
+     (d/transact conn (with-tx-instant tx-instant
+                        [{:db/id (d/tempid :db.part/user)
+                          :db/ident conformity-ensure-norm-tx
+                          :db/doc "Ensures each norm tx is executed exactly once"
+                          :db/fn ensure-norm-tx-txfn}])))))
 
 (defn conforms-to?
   "Does database have a norm installed?
@@ -113,29 +134,31 @@
 (defn reduce-txes
   "Reduces the seq of transactions for a norm into a transaction
   result accumulator"
-  [acc conn norm-attr norm-name txes sync-schema-timeout]
-  (reduce
-   (fn [acc [tx-index tx]]
-     (try
-       (let [safe-tx [conformity-ensure-norm-tx
-                      norm-attr norm-name
-                      (index-attr norm-attr) tx-index
-                      tx]
-             _ (maybe-timeout-synch-schema conn sync-schema-timeout)
-             tx-result @(d/transact conn [safe-tx])]
-         (if (next (:tx-data tx-result))
-           (conj acc {:norm-name norm-name
-                      :tx-index tx-index
-                      :tx-result tx-result})
-           acc))
-       (catch Throwable t
-         (let [reason (.getMessage t)
-               data {:succeeded acc
-                     :failed {:norm-name norm-name
-                              :tx-index tx-index
-                              :reason reason}}]
-           (throw (ex-info reason data t))))))
-   acc (map-indexed vector txes)))
+  ([acc conn norm-attr norm-name txes sync-schema-timeout]
+   (reduce-txes acc conn norm-attr norm-name txes sync-schema-timeout nil))
+  ([acc conn norm-attr norm-name txes sync-schema-timeout tx-instant]
+   (reduce
+     (fn [acc [tx-index tx]]
+       (try
+         (let [safe-tx [conformity-ensure-norm-tx
+                        norm-attr norm-name
+                        (index-attr norm-attr) tx-index
+                        (with-tx-instant tx-instant tx)]
+               _ (maybe-timeout-synch-schema conn sync-schema-timeout)
+               tx-result @(d/transact conn [safe-tx])]
+           (if (next (:tx-data tx-result))
+             (conj acc {:norm-name norm-name
+                        :tx-index tx-index
+                        :tx-result tx-result})
+             acc))
+         (catch Throwable t
+           (let [reason (.getMessage t)
+                 data {:succeeded acc
+                       :failed {:norm-name norm-name
+                                :tx-index tx-index
+                                :reason reason}}]
+             (throw (ex-info reason data t))))))
+     acc (map-indexed vector txes))))
 
 (defn eval-txes-fn
   "Given a connection and a symbol referencing a function on the classpath...
@@ -158,12 +181,13 @@
     (cond-> norm
       txes-fn (merge (eval-txes-fn conn txes-fn)))))
 
-(defn handle-txes [acc conn norm-attr norm-name txes ex sync-schema-timeout]
+(defn handle-txes
   "If a collection of txes data to transact is empty then return:
   1. an info of what's been successfully transacted this far
   2. a structure with info which norm failed and for what reason.
 
   Run transaction for each element of txes collection otherwise."
+  [acc conn norm-attr norm-name txes ex sync-schema-timeout tx-instant]
   (if (empty? txes)
     (let [reason (or ex
                      (str "No transactions provided for norm "
@@ -172,7 +196,8 @@
                 :failed {:norm-name norm-name
                          :reason reason}}]
       (throw (ex-info reason data)))
-    (reduce-txes acc conn norm-attr norm-name txes sync-schema-timeout)))
+    (reduce-txes acc conn norm-attr norm-name txes sync-schema-timeout
+      tx-instant)))
 
 (defn first-time-only-conforms-to?
   "If a norm is supposed to be first-time-only/not-changeable then the decision whether
@@ -193,33 +218,40 @@
                    db conformity-attr norm)))))
 
 (defn handle-first-time-only-norm
-  [acc conn norm-attr norm-map norm-name sync-schema-timeout]
+  [acc conn norm-attr norm-map norm-name sync-schema-timeout tx-instant]
   (if (first-time-only-conforms-to? (db conn) norm-attr norm-name)
     acc
     (let [{:keys [txes ex]} (get-norm conn norm-map norm-name)]
-      (handle-txes acc conn norm-attr norm-name txes ex sync-schema-timeout))))
+      (handle-txes acc conn norm-attr norm-name txes ex sync-schema-timeout
+        tx-instant))))
 
 (defn handle-mutable-norm
-  [acc conn norm-attr norm-map norm-name sync-schema-timeout]
+  [acc conn norm-attr norm-map norm-name sync-schema-timeout tx-instant]
   (let [{:keys [txes ex]} (get-norm conn norm-map norm-name)]
     (if (conforms-to? (db conn) norm-attr norm-name (count txes))
       acc
-      (handle-txes acc conn norm-attr norm-name txes ex sync-schema-timeout))))
+      (handle-txes acc conn norm-attr norm-name txes ex sync-schema-timeout
+        tx-instant))))
 
 (defn reduce-norms
   "Reduces norms from a norm-map specified by a seq of norm-names into
   a transaction result accumulator"
-  [acc conn norm-attr norm-map norm-names]
-  (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
-    (reduce
-     (fn [acc norm-name]
-       (let [{:keys [requires first-time-only]} (get norm-map norm-name)
-             acc (cond-> acc
-                   requires (reduce-norms conn norm-attr norm-map requires))]
-         (if first-time-only
-           (handle-first-time-only-norm acc conn norm-attr norm-map norm-name sync-schema-timeout)
-           (handle-mutable-norm acc conn norm-attr norm-map norm-name sync-schema-timeout))))
-     acc norm-names)))
+  ([acc conn norm-attr norm-map norm-names]
+   (reduce-norms acc conn norm-attr norm-map norm-names nil))
+  ([acc conn norm-attr norm-map norm-names tx-instant]
+   (let [sync-schema-timeout (:conformity.setting/sync-schema-timeout norm-map)]
+     (reduce
+       (fn [acc norm-name]
+         (let [{:keys [requires first-time-only]} (get norm-map norm-name)
+               acc (cond-> acc
+                     requires (reduce-norms conn norm-attr norm-map requires
+                                tx-instant))]
+           (if first-time-only
+             (handle-first-time-only-norm acc conn norm-attr norm-map norm-name
+               sync-schema-timeout tx-instant)
+             (handle-mutable-norm acc conn norm-attr norm-map norm-name
+               sync-schema-timeout tx-instant))))
+       acc norm-names))))
 
 (defn ensure-conforms
   "Ensure that norms represented as datoms are conformed-to (installed), be they
@@ -238,7 +270,7 @@
                          :first-time-only - (optional) a boolean. If true, a norm will be
                                             conformed only once. After that norm-name will
                                             be permanently ignored. Any norm with same norm-name,
-                                            be it modification of the old one or now norm
+                                            be it modification of the old one or new norm
                                             named the same will not even be considered to conformed
                                             as soon as the name reuse is detected.
       norm-names       (optional) A collection of names of norms to conform to.
@@ -254,8 +286,10 @@
   ([conn norm-map norm-names]
    (ensure-conforms conn (default-conformity-attribute-for-db (d/db conn)) norm-map norm-names))
   ([conn conformity-attr norm-map norm-names]
-   (ensure-conformity-schema conn conformity-attr)
-   (reduce-norms [] conn conformity-attr norm-map norm-names)))
+   (ensure-conforms conn conformity-attr norm-map norm-names nil))
+  ([conn conformity-attr norm-map norm-names tx-instant]
+   (ensure-conformity-schema conn conformity-attr tx-instant)
+   (reduce-norms [] conn conformity-attr norm-map norm-names tx-instant)))
 
 (defn- speculative-conn
   "Creates a mock datomic.Connection that speculatively applies transactions using datomic.api/with"

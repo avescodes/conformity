@@ -122,7 +122,16 @@
       (is (= false (has-attribute? (db conn) :conformity/conformed-norms)))
       (ensure-conforms conn sample-norms-map1)
       (is (= true (has-attribute? (db conn) :confirmity/conformed-norms)))
-      (is (= false (has-attribute? (db conn) :conformity/conformed-norms))))))
+      (is (= false (has-attribute? (db conn) :conformity/conformed-norms)))))
+
+  (testing "with tx-instant"
+    (let [conn (fresh-conn)
+          before (last-tx-instant (db conn))]
+      (ensure-conforms conn :conformity/conformed-norms sample-norms-map1
+        (keys sample-norms-map1) before)
+      (is (has-attribute? (db conn) :test/attribute1))
+      (is (has-attribute? (db conn) :test/attribute2))
+      (is (= before (last-tx-instant (db conn)))))))
 
 (deftest test-with-conforms
   (testing "speculatively installs all expected norms"
