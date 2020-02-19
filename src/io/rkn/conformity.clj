@@ -68,9 +68,11 @@
 (defn with-tx-instant
   "If instant is not nil, add it as the :db/txInstant attribute of transaction."
   [instant tx-data]
-  (cond->> tx-data
-    instant (cons {:db/id (d/tempid :db.part/tx)
-                   :db/txInstant instant})))
+  (if instant
+    (cons {:db/id (d/tempid :db.part/tx)
+           :db/txInstant instant}
+          tx-data)
+    tx-data))
 
 (defn ensure-conformity-schema
   "Ensure that the two attributes and one transaction function
