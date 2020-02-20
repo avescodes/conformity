@@ -141,6 +141,18 @@ add `:first-time-only` additional parameter to the norm map, as follows:
   :first-time-only true}}
 ```
 
+### Maintaining txInstant
+
+In Datomic it is possible to do an [initial import of existing data that has its own timestamps](https://docs.datomic.com/on-prem/best-practices.html#set-txinstant-on-imports), where the timestamps are used as the `:db/txInstant` value. To enable the use of Conformity *before* the initial import, a custom `:db/txInstant` value (rather than the transactor's clock time) is necessary. This is because `:db/txInstant` cannot be set to a value that is older than any existing transaction.
+
+This can be done by passing the `tx-instant` argument:
+
+```clojure
+(def conformity-attr (c/default-conformity-attribute-for-db (d/db conn)))
+(def tx-instant (c/last-tx-instant (d/db conn)))  
+(c/ensure-conforms conn conformity-attr norms-map (keys norms-map) tx-instant)
+```
+
 ## License
 
 Copyright © 2012-2014 Ryan Neufeld
